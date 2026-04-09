@@ -1,0 +1,72 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
+import fastifyStatic from '@fastify/static';
+import { config } from './config.js';
+import { authPlugin } from './auth/plugin.js';
+import { authRoutes } from './auth/routes.js';
+import { adminRoutes } from './admin/routes.js';
+import { photoRoutes } from './photos/routes.js';
+import { imageRoutes } from './images/routes.js';
+import { metadataRoutes } from './metadata/routes.js';
+import { activityRoutes } from './activity/routes.js';
+import { searchRoutes } from './search/routes.js';
+
+export async function buildApp() {
+  const app = Fastify({
+    logger: true,
+  });
+
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+  });
+
+  await app.register(cookie);
+
+  // Auth middleware
+  await app.register(authPlugin);
+
+  // API routes
+  await app.register(authRoutes);
+  await app.register(adminRoutes);
+  await app.register(photoRoutes);
+  await app.register(imageRoutes);
+  await app.register(metadataRoutes);
+  await app.register(activityRoutes);
+  await app.register(searchRoutes);
+
+  // Health check
+  app.get('/api/health', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
+  // Serve client in production
+  const clientDist = path.resolve(config.dataDir, '../../client/dist');
+  if (fs.existsSync(clientDist)) {
+    await app.register(fastifyStatic, {
+      root: clientDist,
+      prefix: '/',
+      wildcard: false,
+    });
+
+    // SPA fallback — serve index.html for all non-API routes
+    app.setNotFoundHandler(async (request, reply) => {
+      if (request.url.startsWith('/api/')) {
+        return reply.code(404).send({ error: 'Not found' });
+      }
+      return reply.sendFile('index.html');
+    });
+  } else {
+    app.setNotFoundHandler(async (request, reply) => {
+      if (request.url.startsWith('/api/')) {
+        return reply.code(404).send({ error: 'Not found' });
+      }
+      return reply.code(200).send('Client not built. Run: npm run build --workspace=client');
+    });
+  }
+
+  return app;
+}

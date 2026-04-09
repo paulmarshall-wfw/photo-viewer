@@ -1,0 +1,53 @@
+:root {
+  /* Light Mode: "Daylight Gallery" */
+  --bg-primary: #f9f9f9;
+  --bg-secondary: #f0f0f0;
+  --bg-tertiary: #e5e5e5;
+  --bg-elevated: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --frame-color: #1a1a1a;
+  --accent: #00b8e6;
+  --accent-hover: #009dc4;
+  --accent-glow: rgba(0, 210, 255, 0.15);
+  --danger: #e53935;
+  --danger-hover: #c62828;
+  --success: #16a34a;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-ambient: 0 20px 40px rgba(0, 0, 0, 0.08);
+  --radius: 4px;
+  --radius-lg: 12px;
+  --radius-pill: 9999px;
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --glass-bg: rgba(249, 249, 249, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.04);
+  --image-glow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] {
+  /* Dark Mode: "Obsidian Gallery" */
+  --bg-primary: #0e0e0e;
+  --bg-secondary: #131313;
+  --bg-tertiary: #1a1a1a;
+  --bg-elevated: #242424;
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #5a5a5a;
+  --border-color: rgba(255, 255, 255, 0.06);
+  --frame-color: #ffffff;
+  --accent: #00d2ff;
+  --accent-hover: #00b8e6;
+  --accent-glow: rgba(0, 210, 255, 0.2);
+  --danger: #ff716c;
+  --danger-hover: #e53935;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-ambient: 0 20px 40px rgba(0, 0, 0, 0.4);
+  --glass-bg: rgba(14, 14, 14, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.04);
+  --image-glow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}

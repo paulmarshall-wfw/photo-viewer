@@ -1,0 +1,315 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
+import { SUPPORTED_EXTENSIONS } from '@photo-viewer/shared';
+import type { ImageFormat } from '@photo-viewer/shared';
+import { getDb, getSqlite } from '../db/connection.js';
+import { folders, photos } from '../db/schema.js';
+import { readBasicExif } from '../metadata/exif-reader.js';
+import { readXmp } from '../metadata/xmp.js';
+import { getPhotosPath } from '../admin/service.js';
+
+export interface IndexProgress {
+  phase: 'scanning' | 'indexing' | 'complete';
+  scannedFolders: number;
+  scannedFiles: number;
+  indexedFiles: number;
+  totalFiles: number;
+}
+
+let indexing = false;
+let progress: IndexProgress = {
+  phase: 'complete',
+  scannedFolders: 0,
+  scannedFiles: 0,
+  indexedFiles: 0,
+  totalFiles: 0,
+};
+
+export function getIndexProgress(): IndexProgress {
+  return { ...progress };
+}
+
+export function isIndexing(): boolean {
+  return indexing;
+}
+
+export async function runIndex(folderRelativePath?: string): Promise<void> {
+  if (indexing) return;
+
+  const photosPath = getPhotosPath();
+  if (!photosPath || !fs.existsSync(photosPath)) {
+    throw new Error('Photos path not configured or does not exist');
+  }
+
+  indexing = true;
+  progress = { phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0 };
+
+  try {
+    // Determine scan root: specific folder or entire collection
+    const scanRoot = folderRelativePath
+      ? path.join(photosPath, folderRelativePath)
+      : photosPath;
+
+    if (!fs.existsSync(scanRoot)) {
+      throw new Error('Folder does not exist');
+    }
+
+    // Phase 1: Scan filesystem (only the target folder, not recursive for single-folder mode)
+    const entries = folderRelativePath
+      ? await scanSingleFolder(photosPath, scanRoot)
+      : await scanDirectory(photosPath, photosPath);
+
+    progress.totalFiles = entries.files.length;
+    progress.phase = 'indexing';
+
+    const db = getDb();
+    const now = new Date().toISOString();
+
+    if (!folderRelativePath) {
+      // Full index: upsert root folder
+      db.insert(folders)
+        .values({ id: nanoid(), path: '', name: path.basename(photosPath), parentPath: null, photoCount: 0, indexedAt: now })
+        .onConflictDoUpdate({ target: folders.path, set: { name: path.basename(photosPath), indexedAt: now } })
+        .run();
+    }
+
+    // Upsert all folders found
+    for (const folderEntry of entries.folders) {
+      db.insert(folders)
+        .values({ id: nanoid(), path: folderEntry.relativePath, name: folderEntry.name, parentPath: folderEntry.parentPath, photoCount: 0, indexedAt: now })
+        .onConflictDoUpdate({ target: folders.path, set: { name: folderEntry.name, parentPath: folderEntry.parentPath, indexedAt: now } })
+        .run();
+    }
+
+    // Index photos
+    for (const fileEntry of entries.files) {
+      const existing = db.select().from(photos).where(eq(photos.filePath, fileEntry.relativePath)).get();
+
+      // Skip if file hasn't changed
+      if (existing && existing.fileModifiedAt === fileEntry.mtime) {
+        progress.indexedFiles++;
+        continue;
+      }
+
+      // Read EXIF data
+      const absolutePath = path.join(photosPath, fileEntry.relativePath);
+      const exif = await readBasicExif(absolutePath);
+
+      // Check for story sidecar
+      const storyPath = absolutePath + '.story.md';
+      const hasStory = fs.existsSync(storyPath);
+
+      // Read XMP sidecar metadata (title/caption/date overrides)
+      const xmp = readXmp(absolutePath);
+      const xmpTitle = xmp.title;
+      const xmpCaption = xmp.caption;
+      const xmpDateTaken = xmp.dateTaken;
+
+      const photoData = {
+        folderPath: fileEntry.folderPath,
+        filename: fileEntry.name,
+        filePath: fileEntry.relativePath,
+        fileSize: fileEntry.size,
+        fileModifiedAt: fileEntry.mtime,
+        format: fileEntry.format,
+        width: exif.width,
+        height: exif.height,
+        title: xmpTitle || exif.title,
+        caption: xmpCaption || exif.caption,
+        dateTaken: xmpDateTaken || exif.dateTaken,
+        hasStory,
+        indexedAt: now,
+      };
+
+      if (existing) {
+        db.update(photos).set(photoData).where(eq(photos.id, existing.id)).run();
+      } else {
+        db.insert(photos).values({ id: nanoid(), ...photoData }).run();
+      }
+
+      progress.indexedFiles++;
+    }
+
+    // Update folder photo counts and first photo
+    updateFolderStats();
+
+    // Rebuild FTS5 index
+    rebuildFtsIndex();
+
+    // Clean up deleted files (only for full index)
+    if (!folderRelativePath) {
+      cleanupDeleted(entries.files.map(f => f.relativePath), entries.folders.map(f => f.relativePath));
+    } else {
+      // For single-folder index, only clean up files in that folder
+      cleanupDeletedInFolder(folderRelativePath, entries.files.map(f => f.relativePath));
+    }
+
+    progress.phase = 'complete';
+  } finally {
+    indexing = false;
+  }
+}
+
+interface ScanResult {
+  folders: { relativePath: string; name: string; parentPath: string | null }[];
+  files: { relativePath: string; name: string; folderPath: string; format: ImageFormat; size: number; mtime: string }[];
+}
+
+async function scanSingleFolder(rootPath: string, folderPath: string): Promise<ScanResult> {
+  const result: ScanResult = { folders: [], files: [] };
+  const relativeFolderPath = path.relative(rootPath, folderPath);
+
+  const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+
+    const absolutePath = path.join(folderPath, entry.name);
+
+    if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      const format = SUPPORTED_EXTENSIONS[ext];
+      if (format) {
+        const stat = fs.statSync(absolutePath);
+        const relativePath = path.relative(rootPath, absolutePath);
+        result.files.push({
+          relativePath,
+          name: entry.name,
+          folderPath: relativeFolderPath || '',
+          format,
+          size: stat.size,
+          mtime: stat.mtime.toISOString(),
+        });
+        progress.scannedFiles++;
+      }
+    }
+  }
+
+  progress.scannedFolders = 1;
+  return result;
+}
+
+async function scanDirectory(rootPath: string, currentPath: string): Promise<ScanResult> {
+  const result: ScanResult = { folders: [], files: [] };
+
+  const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue; // Skip hidden files/folders
+
+    const absolutePath = path.join(currentPath, entry.name);
+    const relativePath = path.relative(rootPath, absolutePath);
+
+    if (entry.isDirectory()) {
+      const parentRelative = path.relative(rootPath, currentPath);
+      result.folders.push({
+        relativePath,
+        name: entry.name,
+        parentPath: parentRelative || null,
+      });
+      progress.scannedFolders++;
+
+      const subResult = await scanDirectory(rootPath, absolutePath);
+      result.folders.push(...subResult.folders);
+      result.files.push(...subResult.files);
+    } else if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      const format = SUPPORTED_EXTENSIONS[ext];
+      if (format) {
+        const stat = fs.statSync(absolutePath);
+        const folderRelative = path.relative(rootPath, currentPath);
+        result.files.push({
+          relativePath,
+          name: entry.name,
+          folderPath: folderRelative || '',
+          format,
+          size: stat.size,
+          mtime: stat.mtime.toISOString(),
+        });
+        progress.scannedFiles++;
+      }
+    }
+  }
+
+  return result;
+}
+
+function updateFolderStats() {
+  const db = getDb();
+  const sqlite = db.$client as any;
+
+  // Update photo counts
+  sqlite.exec(`
+    UPDATE folders SET photo_count = (
+      SELECT COUNT(*) FROM photos WHERE photos.folder_path = folders.path
+    )
+  `);
+
+  // Update first photo ID
+  sqlite.exec(`
+    UPDATE folders SET first_photo_id = (
+      SELECT id FROM photos WHERE photos.folder_path = folders.path ORDER BY date_taken ASC, filename ASC LIMIT 1
+    )
+  `);
+}
+
+function rebuildFtsIndex() {
+  const sqlite = getSqlite();
+
+  // Drop and recreate the FTS table since it's an external-content table
+  // with columns that don't exist in the photos table (story_text, folder_name)
+  sqlite.exec(`DROP TABLE IF EXISTS photos_fts`);
+  sqlite.exec(`
+    CREATE VIRTUAL TABLE photos_fts USING fts5(
+      title, caption, story_text, folder_name, filename,
+      content='',
+      content_rowid='rowid'
+    )
+  `);
+
+  // Populate with data from photos + folders
+  sqlite.exec(`
+    INSERT INTO photos_fts(rowid, title, caption, story_text, folder_name, filename)
+    SELECT p.rowid, COALESCE(p.title, ''), COALESCE(p.caption, ''), '', COALESCE(f.name, ''), p.filename
+    FROM photos p
+    LEFT JOIN folders f ON p.folder_path = f.path
+  `);
+}
+
+function cleanupDeletedInFolder(folderPath: string, currentFiles: string[]) {
+  const db = getDb();
+  const folderPhotos = db.select({ id: photos.id, filePath: photos.filePath })
+    .from(photos)
+    .where(eq(photos.folderPath, folderPath))
+    .all();
+  const currentFileSet = new Set(currentFiles);
+
+  for (const photo of folderPhotos) {
+    if (!currentFileSet.has(photo.filePath)) {
+      db.delete(photos).where(eq(photos.id, photo.id)).run();
+    }
+  }
+}
+
+function cleanupDeleted(currentFiles: string[], currentFolders: string[]) {
+  const db = getDb();
+  const allPhotos = db.select({ id: photos.id, filePath: photos.filePath }).from(photos).all();
+  const currentFileSet = new Set(currentFiles);
+
+  for (const photo of allPhotos) {
+    if (!currentFileSet.has(photo.filePath)) {
+      db.delete(photos).where(eq(photos.id, photo.id)).run();
+    }
+  }
+
+  const allFolders = db.select({ id: folders.id, path: folders.path }).from(folders).all();
+  const currentFolderSet = new Set(['', ...currentFolders]);
+
+  for (const folder of allFolders) {
+    if (!currentFolderSet.has(folder.path)) {
+      db.delete(folders).where(eq(folders.id, folder.id)).run();
+    }
+  }
+}
