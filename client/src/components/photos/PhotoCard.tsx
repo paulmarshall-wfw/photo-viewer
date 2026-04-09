@@ -46,7 +46,7 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
         overflow: 'hidden',
       }}>
         <img
-          src={`/api/photos/${photo.id}/thumbnail`}
+          src={`/api/photos/${photo.id}/thumbnail?v=${encodeURIComponent(photo.fileModifiedAt)}`}
           alt={photo.title || photo.filename}
           loading="lazy"
           style={{

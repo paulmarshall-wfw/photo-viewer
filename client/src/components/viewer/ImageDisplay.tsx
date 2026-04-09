@@ -24,7 +24,7 @@ export function ImageDisplay({ photo }: ImageDisplayProps) {
         boxShadow: 'var(--shadow-ambient)',
       }}>
         <img
-          src={`/api/photos/${photo.id}/preview`}
+          src={`/api/photos/${photo.id}/preview?v=${encodeURIComponent(photo.fileModifiedAt)}`}
           alt={photo.title || photo.filename}
           style={{
             maxWidth: '100%',

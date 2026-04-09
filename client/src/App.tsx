@@ -12,6 +12,8 @@ import { ViewerPage } from './pages/ViewerPage.js';
 import { SearchPage } from './pages/SearchPage.js';
 import { ActivityPage } from './pages/ActivityPage.js';
 import { ErrorBoundary } from './components/shared/ErrorBoundary.js';
+import { ThemeToggle } from './components/shared/ThemeToggle.js';
+import { ToastProvider } from './components/shared/Toast.js';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,6 +112,7 @@ function MainApp() {
 function EmailLoginPage() {
   const [email, setEmail] = useState('');
   const login = useLogin();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +120,10 @@ function EmailLoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      </div>
       <div className="card" style={{ width: '100%', maxWidth: 400 }}>
         <h1 style={{ fontSize: 28, marginBottom: 4, fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em' }}>Login</h1>
         <p style={{ color: 'var(--text-secondary)', marginBottom: 28 }}>Sign in with your email address</p>
@@ -190,9 +196,11 @@ export function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ToastProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

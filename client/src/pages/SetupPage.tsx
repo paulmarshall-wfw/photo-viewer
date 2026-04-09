@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useSetup } from '../hooks/useAuth.js';
 import { FolderPicker } from '../components/shared/FolderPicker.js';
+import { useTheme } from '../hooks/useTheme.js';
+import { ThemeToggle } from '../components/shared/ThemeToggle.js';
 
 export function SetupPage() {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [photosPath, setPhotosPath] = useState('');
   const setup = useSetup();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,7 +17,10 @@ export function SetupPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      </div>
       <div className="card" style={{ width: '100%', maxWidth: 440 }}>
         <h1 style={{ marginBottom: 4, fontSize: 28, fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em' }}>Setup</h1>
         <p style={{ color: 'var(--text-secondary)', marginBottom: 28 }}>Set up your photo collection</p>

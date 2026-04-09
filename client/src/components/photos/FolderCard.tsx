@@ -36,7 +36,7 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
     >
       {folder.firstPhotoId ? (
         <img
-          src={`/api/photos/${folder.firstPhotoId}/thumbnail`}
+          src={`/api/photos/${folder.firstPhotoId}/thumbnail?v=${encodeURIComponent(folder.indexedAt)}`}
           alt=""
           style={{
             width: 52,

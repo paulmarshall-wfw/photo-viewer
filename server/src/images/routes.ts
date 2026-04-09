@@ -8,6 +8,17 @@ import { getPhotosPath } from '../admin/service.js';
 import { hasCachedThumbnail, hasCachedPreview, getThumbnailPath, getPreviewPath } from './cache.js';
 import { generateThumbnail, generatePreview, generateThumbnailFromBuffer, generatePreviewFromBuffer, generateThumbnailFromPsd, generatePreviewFromPsd } from './preview-generator.js';
 import { extractEmbeddedPreview } from './raw-processor.js';
+import type { FastifyReply } from 'fastify';
+
+function setCacheHeaders(reply: FastifyReply, filePath: string) {
+  reply.header('Cache-Control', 'public, max-age=86400');
+  try {
+    const stat = fs.statSync(filePath);
+    reply.header('ETag', `"${stat.mtimeMs.toString(36)}-${stat.size.toString(36)}"`);
+  } catch {
+    // ignore stat errors
+  }
+}
 
 // Simple concurrency limiter
 let activeJobs = 0;
@@ -40,8 +51,9 @@ export async function imageRoutes(app: FastifyInstance) {
 
     // Check cache
     if (hasCachedThumbnail(photo.id)) {
-      reply.header('Cache-Control', 'public, max-age=86400');
-      return reply.type('image/jpeg').send(fs.createReadStream(getThumbnailPath(photo.id)));
+      const thumbPath = getThumbnailPath(photo.id);
+      setCacheHeaders(reply, thumbPath);
+      return reply.type('image/jpeg').send(fs.createReadStream(thumbPath));
     }
 
     // Generate
@@ -71,8 +83,9 @@ export async function imageRoutes(app: FastifyInstance) {
           .run();
       });
 
-      reply.header('Cache-Control', 'public, max-age=86400');
-      return reply.type('image/jpeg').send(fs.createReadStream(getThumbnailPath(photo.id)));
+      const thumbPath = getThumbnailPath(photo.id);
+      setCacheHeaders(reply, thumbPath);
+      return reply.type('image/jpeg').send(fs.createReadStream(thumbPath));
     } catch (err) {
       request.log.error(err, 'Failed to generate thumbnail');
       return reply.code(500).send({ error: 'Failed to generate thumbnail' });
@@ -90,8 +103,9 @@ export async function imageRoutes(app: FastifyInstance) {
 
     // Check cache
     if (hasCachedPreview(photo.id)) {
-      reply.header('Cache-Control', 'public, max-age=86400');
-      return reply.type('image/jpeg').send(fs.createReadStream(getPreviewPath(photo.id)));
+      const prevPath = getPreviewPath(photo.id);
+      setCacheHeaders(reply, prevPath);
+      return reply.type('image/jpeg').send(fs.createReadStream(prevPath));
     }
 
     // Generate
@@ -118,8 +132,9 @@ export async function imageRoutes(app: FastifyInstance) {
           .run();
       });
 
-      reply.header('Cache-Control', 'public, max-age=86400');
-      return reply.type('image/jpeg').send(fs.createReadStream(getPreviewPath(photo.id)));
+      const prevPath = getPreviewPath(photo.id);
+      setCacheHeaders(reply, prevPath);
+      return reply.type('image/jpeg').send(fs.createReadStream(prevPath));
     } catch (err) {
       request.log.error(err, 'Failed to generate preview');
       return reply.code(500).send({ error: 'Failed to generate preview' });

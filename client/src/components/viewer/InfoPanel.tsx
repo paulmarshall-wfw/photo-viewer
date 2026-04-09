@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Photo, User, StoryEntry } from '@photo-viewer/shared';
 import { InlineEdit } from './InlineEdit.js';
 import { StoryEditor } from './StoryEditor.js';
+import { useToast } from '../shared/Toast.js';
 
 interface InfoPanelProps {
   photo: Photo;
@@ -158,6 +159,7 @@ function DateTimeFields({ dateTaken, onSave, editedBy }: { dateTaken: string; on
 
 export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPanelProps) {
   const queryClient = useQueryClient();
+  const { showError } = useToast();
 
   const storyQuery = useQuery<{ entries: StoryEntry[] }>({
     queryKey: ['story', photo.id],
@@ -178,6 +180,7 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metadata', photo.id] });
     },
+    onError: () => showError('Failed to save title'),
   });
 
   const updateCaption = useMutation({
@@ -189,6 +192,7 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metadata', photo.id] });
     },
+    onError: () => showError('Failed to save caption'),
   });
 
   const updateDate = useMutation({
@@ -200,24 +204,28 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metadata', photo.id] });
     },
+    onError: () => showError('Failed to save date'),
   });
 
   const addStory = useMutation({
     mutationFn: (content: string) =>
       fetchJson(`/photos/${photo.id}/story`, { method: 'POST', body: JSON.stringify({ content }) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['story', photo.id] }),
+    onError: () => showError('Failed to save story'),
   });
 
   const editStory = useMutation({
     mutationFn: ({ index, content }: { index: number; content: string }) =>
       fetchJson(`/photos/${photo.id}/story/${index}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['story', photo.id] }),
+    onError: () => showError('Failed to update story'),
   });
 
   const deleteStory = useMutation({
     mutationFn: (index: number) =>
       fetchJson(`/photos/${photo.id}/story/${index}`, { method: 'DELETE' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['story', photo.id] }),
+    onError: () => showError('Failed to delete story'),
   });
 
   const meta = metadataQuery.data?.metadata;

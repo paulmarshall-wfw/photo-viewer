@@ -30,6 +30,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
 
   const [indexProgress, setIndexProgress] = useState<{ phase: string; scannedFolders: number; scannedFiles: number; indexedFiles: number; totalFiles: number } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error, refetch } = useFolderContents(folderPath, sort, order);
 
@@ -168,7 +169,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
       )}
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+      <div ref={scrollContainerRef} style={{ flex: 1, overflow: 'auto', padding: 24 }}>
         {isLoading && (
           <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Loading...</div>
         )}
@@ -207,7 +208,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
                   Photos ({data.totalPhotos})
                 </h2>
               )}
-              <ThumbnailGrid photos={data.photos} onPhotoClick={handlePhotoClick} />
+              <ThumbnailGrid photos={data.photos} onPhotoClick={handlePhotoClick} scrollContainerRef={scrollContainerRef} />
             </section>
 
             {data.subfolders.length === 0 && data.photos.length === 0 && (
