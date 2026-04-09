@@ -13,14 +13,20 @@ function updateFtsField(photoId: string, field: 'title' | 'caption', value: stri
   // Get the rowid for this photo
   const row = sqlite.prepare(`SELECT rowid FROM photos WHERE id = ?`).get(photoId) as any;
   if (!row) return;
-  // Update the FTS index — delete old entry and re-insert
-  sqlite.prepare(`DELETE FROM photos_fts WHERE rowid = ?`).run(row.rowid);
   const photo = sqlite.prepare(`SELECT title, caption, filename, folder_path FROM photos WHERE id = ?`).get(photoId) as any;
   if (!photo) return;
   const folder = sqlite.prepare(`SELECT name FROM folders WHERE path = ?`).get(photo.folder_path) as any;
+  const folderName = folder?.name || '';
+  // For contentless fts5 tables, use the special 'delete' command to remove old entry
+  sqlite.prepare(
+    `INSERT INTO photos_fts(photos_fts, rowid, title, caption, story_text, folder_name, filename) VALUES ('delete', ?, ?, ?, '', ?, ?)`
+  ).run(row.rowid, photo.title || '', photo.caption || '', folderName, photo.filename);
+  // Now insert the updated entry (apply the new value)
+  const newTitle = field === 'title' ? value : (photo.title || '');
+  const newCaption = field === 'caption' ? value : (photo.caption || '');
   sqlite.prepare(
     `INSERT INTO photos_fts(rowid, title, caption, story_text, folder_name, filename) VALUES (?, ?, ?, '', ?, ?)`
-  ).run(row.rowid, photo.title || '', photo.caption || '', folder?.name || '', photo.filename);
+  ).run(row.rowid, newTitle, newCaption, folderName, photo.filename);
 }
 
 function getAbsolutePhotoPath(filePath: string): string | null {
@@ -43,8 +49,8 @@ export async function metadataRoutes(app: FastifyInstance) {
     const userName = request.user?.displayName || 'Unknown';
 
     writeXmpField(absolutePath, 'title', title, userName);
-    db.update(photos).set({ title }).where(eq(photos.id, photo.id)).run();
     updateFtsField(photo.id, 'title', title);
+    db.update(photos).set({ title }).where(eq(photos.id, photo.id)).run();
     logActivity(request.user!.id, photo.id, 'set_title', JSON.stringify({ title }));
 
     return { success: true, title };
@@ -63,8 +69,8 @@ export async function metadataRoutes(app: FastifyInstance) {
     const userName = request.user?.displayName || 'Unknown';
 
     writeXmpField(absolutePath, 'caption', caption, userName);
-    db.update(photos).set({ caption }).where(eq(photos.id, photo.id)).run();
     updateFtsField(photo.id, 'caption', caption);
+    db.update(photos).set({ caption }).where(eq(photos.id, photo.id)).run();
     logActivity(request.user!.id, photo.id, 'set_caption', JSON.stringify({ caption }));
 
     return { success: true, caption };
