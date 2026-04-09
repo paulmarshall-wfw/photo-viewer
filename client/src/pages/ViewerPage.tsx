@@ -5,7 +5,7 @@ import type { Photo, Theme, User } from '@photo-viewer/shared';
 import { ImageDisplay } from '../components/viewer/ImageDisplay.js';
 import { ThumbnailStrip } from '../components/photos/ThumbnailStrip.js';
 import { SlideshowControls } from '../components/viewer/SlideshowControls.js';
-import { FullscreenWrapper } from '../components/viewer/FullscreenWrapper.js';
+import { FullscreenWrapper, FullscreenButton } from '../components/viewer/FullscreenWrapper.js';
 import { InfoPanel } from '../components/viewer/InfoPanel.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
 import { useTheme } from '../hooks/useTheme.js';
@@ -34,6 +34,7 @@ export function ViewerPage({
   const { theme: currentTheme, toggleTheme } = useTheme();
   const [slideshowPlaying, setSlideshowPlaying] = useState(false);
   const [slideshowInterval, setSlideshowInterval] = useState(5);
+  const [slideshowLoop, setSlideshowLoop] = useState(true);
   const [localPhoto, setLocalPhoto] = useState(photo);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
@@ -47,10 +48,12 @@ export function ViewerPage({
   const goNext = useCallback(() => {
     if (currentIndex < allPhotos.length - 1) {
       onPhotoChange(allPhotos[currentIndex + 1]);
-    } else if (slideshowPlaying) {
+    } else if (slideshowPlaying && slideshowLoop) {
       onPhotoChange(allPhotos[0]);
+    } else if (slideshowPlaying && !slideshowLoop) {
+      setSlideshowPlaying(false);
     }
-  }, [currentIndex, allPhotos, onPhotoChange, slideshowPlaying]);
+  }, [currentIndex, allPhotos, onPhotoChange, slideshowPlaying, slideshowLoop]);
 
   const goPrev = useCallback(() => {
     if (currentIndex > 0) {
@@ -100,7 +103,7 @@ export function ViewerPage({
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <button className="btn btn-ghost" onClick={onBack} style={{ padding: '4px 8px' }}>
-                <ArrowLeft size={16} /> Back
+                <ArrowLeft size={16} /> Gallery
               </button>
               <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Viewer</span>
               <ThemeToggle theme={currentTheme} onToggle={toggleTheme} />
@@ -136,8 +139,10 @@ export function ViewerPage({
             <SlideshowControls
               isPlaying={slideshowPlaying}
               interval={slideshowInterval}
+              loop={slideshowLoop}
               onToggle={() => setSlideshowPlaying(!slideshowPlaying)}
               onIntervalChange={setSlideshowInterval}
+              onLoopChange={setSlideshowLoop}
             />
             <button className="btn btn-ghost" onClick={handleDownload} style={{ padding: '4px 8px' }} title="Download original">
               <Download size={16} />
@@ -169,6 +174,9 @@ export function ViewerPage({
               {localPhoto.caption}
             </div>
           )}
+
+          {/* Fullscreen button */}
+          <FullscreenButton />
 
           {/* Thumbnail strip */}
           <ThumbnailStrip

@@ -1,5 +1,10 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { Maximize, Minimize } from 'lucide-react';
+
+const FullscreenContext = createContext<{
+  isFullscreen: boolean;
+  toggle: () => void;
+}>({ isFullscreen: false, toggle: () => {} });
 
 interface FullscreenWrapperProps {
   children: React.ReactNode;
@@ -11,7 +16,7 @@ export function FullscreenWrapper({ children }: FullscreenWrapperProps) {
   const [showControls, setShowControls] = useState(true);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const toggleFullscreen = useCallback(async () => {
+  const toggle = useCallback(async () => {
     if (!document.fullscreenElement) {
       await containerRef.current?.requestFullscreen();
     } else {
@@ -34,35 +39,35 @@ export function FullscreenWrapper({ children }: FullscreenWrapperProps) {
   }, [isFullscreen]);
 
   return (
-    <div
-      ref={containerRef}
-      onMouseMove={handleMouseMove}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: 'var(--bg-primary)',
-        position: 'relative',
-      }}
-    >
-      {children}
-
-      <button
-        onClick={toggleFullscreen}
-        className="btn btn-ghost"
+    <FullscreenContext.Provider value={{ isFullscreen, toggle }}>
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
         style={{
-          position: 'absolute',
-          bottom: 12,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          padding: '6px',
-          opacity: showControls ? 0.8 : 0,
-          transition: 'opacity 0.3s',
-          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          background: 'var(--bg-primary)',
         }}
+      >
+        {children}
+      </div>
+    </FullscreenContext.Provider>
+  );
+}
+
+export function FullscreenButton() {
+  const { isFullscreen, toggle } = useContext(FullscreenContext);
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0', flexShrink: 0 }}>
+      <button
+        onClick={toggle}
+        className="btn btn-ghost"
+        style={{ padding: '4px 8px', opacity: 0.7 }}
         title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       >
-        {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+        {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
       </button>
     </div>
   );

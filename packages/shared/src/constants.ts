@@ -37,4 +37,4 @@ export const MAX_PAGE_SIZE = 500;
 export const SESSION_COOKIE_NAME = 'pv_session';
 export const SESSION_MAX_AGE_DAYS = 365;
 
-export const SLIDESHOW_INTERVALS = [5, 10, 15, 30];
+export const SLIDESHOW_INTERVALS = [2, 5, 10, 15, 30];
