@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { ActivityEntry, AnnotationProgress } from '@photo-viewer/shared';
 import { ProgressBar } from '../components/shared/ProgressBar.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
@@ -31,6 +32,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function ActivityPage({ onBack }: ActivityPageProps) {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const activityQuery = useQuery<{ entries: ActivityEntry[]; total: number }>({
     queryKey: ['activity'],
@@ -68,6 +70,9 @@ export function ActivityPage({ onBack }: ActivityPageProps) {
         </button>
         <h1 style={{ fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Activity</h1>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <BookOpen size={14} /> Read Me
+        </button>
       </header>
 
       <div style={{ flex: 1, overflow: 'auto', padding: 24, maxWidth: 700, margin: '0 auto', width: '100%' }}>

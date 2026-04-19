@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { Photo } from '@photo-viewer/shared';
 import { FilterPanel } from '../components/search/FilterPanel.js';
 import { ThumbnailGrid } from '../components/photos/ThumbnailGrid.js';
@@ -14,6 +15,7 @@ interface SearchPageProps {
 }
 
 export function SearchPage({ initialQuery, onBack, onPhotoSelect }: SearchPageProps) {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [query] = useState(initialQuery);
   const [dateFrom, setDateFrom] = useState('');
@@ -64,6 +66,9 @@ export function SearchPage({ initialQuery, onBack, onPhotoSelect }: SearchPagePr
           Search
         </h1>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <BookOpen size={14} /> Read Me
+        </button>
         <span style={{ fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
           "{query}"
           {searchQuery.data && (

@@ -7,6 +7,7 @@ import { useTheme } from './hooks/useTheme.js';
 import { SetupPage } from './pages/SetupPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { AdminPage } from './pages/AdminPage.js';
+import { ReadmePage } from './pages/ReadmePage.js';
 import { BrowsePage } from './pages/BrowsePage.js';
 import { ViewerPage } from './pages/ViewerPage.js';
 import { SearchPage } from './pages/SearchPage.js';
@@ -186,6 +187,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/admin" element={<AdminPage />} />
+      <Route path="/readme" element={<ReadmePage />} />
       <Route path="/invite/:token" element={<Navigate to="/" replace />} />
       <Route path="*" element={<MainApp />} />
     </Routes>

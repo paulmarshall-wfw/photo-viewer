@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Settings, Activity } from 'lucide-react';
+import { RefreshCw, Settings, Activity, BookOpen } from 'lucide-react';
 import type { Photo, SortField, SortOrder } from '@photo-viewer/shared';
 import { useCurrentUser, useLogout } from '../hooks/useAuth.js';
 import { useFolderContents, useTriggerIndex } from '../hooks/useFolders.js';
@@ -28,7 +28,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
   const [sort, setSort] = useState<SortField>('filename');
   const [order, setOrder] = useState<SortOrder>('asc');
 
-  const [indexProgress, setIndexProgress] = useState<{ phase: string; scannedFolders: number; scannedFiles: number; indexedFiles: number; totalFiles: number } | null>(null);
+  const [indexProgress, setIndexProgress] = useState<{ phase: string; scannedFolders: number; scannedFiles: number; indexedFiles: number; totalFiles: number; previewsTotal: number; previewsDone: number } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +62,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
   }, []);
 
   const handleIndex = () => {
-    setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0 });
+    setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
     triggerIndex.mutate(folderPath || undefined, {
       onSuccess: () => startPolling(),
     });
@@ -124,6 +124,9 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
               <Settings size={14} />
             </button>
           )}
+          <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <BookOpen size={14} /> Read Me
+          </button>
           <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{user.data?.displayName}</span>
           <button className="btn btn-ghost" onClick={() => logout.mutate()} style={{ padding: '4px 8px', fontSize: 13 }}>
             Logout
@@ -143,12 +146,24 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             <span style={{ color: 'var(--text-secondary)' }}>
               {indexProgress.phase === 'scanning' && `Scanning folders... ${indexProgress.scannedFolders} folders, ${indexProgress.scannedFiles} files found`}
               {indexProgress.phase === 'indexing' && `Indexing... ${indexProgress.indexedFiles} of ${indexProgress.totalFiles} files`}
+              {indexProgress.phase === 'previews' && `Generating previews... ${indexProgress.previewsDone} of ${indexProgress.previewsTotal}`}
               {indexProgress.phase === 'complete' && `Indexing complete — ${indexProgress.totalFiles} files processed`}
             </span>
             {indexProgress.phase === 'complete' && (
               <span style={{ color: 'var(--success)', fontWeight: 500 }}>Done</span>
             )}
           </div>
+          {indexProgress.phase === 'previews' && indexProgress.previewsTotal > 0 && (
+            <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                borderRadius: 2,
+                background: 'var(--accent)',
+                width: `${(indexProgress.previewsDone / indexProgress.previewsTotal) * 100}%`,
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+          )}
           {indexProgress.phase === 'indexing' && indexProgress.totalFiles > 0 && (
             <div style={{
               height: 4,

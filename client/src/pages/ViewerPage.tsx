@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { Photo, Theme, User } from '@photo-viewer/shared';
 import { ImageDisplay } from '../components/viewer/ImageDisplay.js';
 import { ThumbnailStrip } from '../components/photos/ThumbnailStrip.js';
@@ -31,6 +32,7 @@ export function ViewerPage({
   onToggleInfo,
   showInfo,
 }: ViewerPageProps) {
+  const navigate = useNavigate();
   const { theme: currentTheme, toggleTheme } = useTheme();
   const [slideshowPlaying, setSlideshowPlaying] = useState(false);
   const [slideshowInterval, setSlideshowInterval] = useState(5);
@@ -107,6 +109,9 @@ export function ViewerPage({
               </button>
               <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Viewer</span>
               <ThemeToggle theme={currentTheme} onToggle={toggleTheme} />
+              <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <BookOpen size={14} /> Read Me
+              </button>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 {currentIndex + 1} of {allPhotos.length}
               </span>
@@ -156,8 +161,8 @@ export function ViewerPage({
                 fontWeight: 600,
                 fontFamily: 'Georgia, serif',
                 fontStyle: 'italic',
-                background: showInfo ? 'var(--accent)' : undefined,
-                color: showInfo ? '#fff' : undefined,
+                background: 'var(--accent)',
+                color: '#fff',
               }}
               title="Photo information"
             >

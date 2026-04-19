@@ -80,21 +80,15 @@ export function AdminPage() {
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 20px' }}>
       <div style={{ marginBottom: 32 }}>
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate('/')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
-            fontSize: 14,
-            fontWeight: 500,
-            marginBottom: 16,
-          }}
-        >
-          <ArrowLeft size={18} /> Back to Library
-        </button>
+        <div style={{ marginBottom: 16 }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', fontSize: 14, fontWeight: 500 }}
+          >
+            <ArrowLeft size={18} /> Back to Library
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h1 style={{ fontSize: 24, fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.02em' }}>Settings</h1>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -206,9 +200,10 @@ export function AdminPage() {
         </h2>
         <form
           onSubmit={(e) => { e.preventDefault(); updateConfigMutation.mutate({ photosPath }); }}
-          style={{ display: 'flex', gap: 8 }}
         >
-          <FolderPicker value={photosPath} onChange={setPhotosPath} />
+          <div style={{ marginBottom: 12 }}>
+            <FolderPicker value={photosPath} onChange={setPhotosPath} />
+          </div>
           <button className="btn btn-primary" type="submit" disabled={updateConfigMutation.isPending}>
             Update
           </button>

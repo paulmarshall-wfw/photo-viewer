@@ -58,6 +58,7 @@ export function FolderPicker({ value, onChange }: FolderPickerProps) {
           onChange={(e) => onChange(e.target.value)}
           placeholder="/path/to/your/photos"
           required
+          style={{ flex: 1, minWidth: 0 }}
         />
         <button
           type="button"

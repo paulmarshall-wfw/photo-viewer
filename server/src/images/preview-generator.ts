@@ -217,7 +217,30 @@ async function convertPsdToBuffer(sourcePath: string, maxDimension: number): Pro
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 
-  // Method 3: Extract embedded PhotoshopThumbnail via exiftool
+  // Method 3: ImageMagick — handles 16-bit PSB files that sips and qlmanage can't read.
+  // Using [0] reads only the merged composite layer — ~8× faster than reading all layers.
+  {
+    const magickOut = path.join(os.tmpdir(), `pv_magick_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+    try {
+      await execFileAsync('magick', [
+        `psd:${sourcePath}[0]`,
+        '-resize', `${maxDimension}x${maxDimension}>`,
+        magickOut,
+      ]);
+      if (fs.existsSync(magickOut)) {
+        const buffer = fs.readFileSync(magickOut);
+        if (buffer.length > 1000 && await isImageContentValid(buffer)) {
+          return buffer;
+        }
+      }
+    } catch {
+      // ImageMagick not available or failed
+    } finally {
+      if (fs.existsSync(magickOut)) fs.unlinkSync(magickOut);
+    }
+  }
+
+  // Method 4: Extract embedded PhotoshopThumbnail via exiftool
   // This is small (typically ~160px) but better than nothing
   const tmpThumb = path.join(os.tmpdir(), `pv_psthumb_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
   try {

@@ -9,13 +9,17 @@ import { folders, photos } from '../db/schema.js';
 import { readBasicExif } from '../metadata/exif-reader.js';
 import { readXmp } from '../metadata/xmp.js';
 import { getPhotosPath } from '../admin/service.js';
+import { generateThumbnailFromPsd, generatePreviewFromPsd } from '../images/preview-generator.js';
+import { hasCachedThumbnail, hasCachedPreview, getThumbnailPath, getPreviewPath } from '../images/cache.js';
 
 export interface IndexProgress {
-  phase: 'scanning' | 'indexing' | 'complete';
+  phase: 'scanning' | 'indexing' | 'previews' | 'complete';
   scannedFolders: number;
   scannedFiles: number;
   indexedFiles: number;
   totalFiles: number;
+  previewsTotal: number;
+  previewsDone: number;
 }
 
 let indexing = false;
@@ -25,6 +29,8 @@ let progress: IndexProgress = {
   scannedFiles: 0,
   indexedFiles: 0,
   totalFiles: 0,
+  previewsTotal: 0,
+  previewsDone: 0,
 };
 
 export function getIndexProgress(): IndexProgress {
@@ -44,7 +50,7 @@ export async function runIndex(folderRelativePath?: string): Promise<void> {
   }
 
   indexing = true;
-  progress = { phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0 };
+  progress = { phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 };
 
   try {
     // Determine scan root: specific folder or entire collection
@@ -144,6 +150,42 @@ export async function runIndex(folderRelativePath?: string): Promise<void> {
     } else {
       // For single-folder index, only clean up files in that folder
       cleanupDeletedInFolder(folderRelativePath, entries.files.map(f => f.relativePath));
+    }
+
+    // Generate previews for PSD/PSB files that don't have one yet
+    const psdPhotos = db.select({ id: photos.id, filePath: photos.filePath, filename: photos.filename })
+      .from(photos)
+      .where(eq(photos.format, 'psd'))
+      .all()
+      .filter(p => !hasCachedPreview(p.id) || !hasCachedThumbnail(p.id));
+
+    if (psdPhotos.length > 0) {
+      progress.phase = 'previews';
+      progress.previewsTotal = psdPhotos.length;
+      progress.previewsDone = 0;
+
+      for (const photo of psdPhotos) {
+        const absolutePath = path.join(photosPath, photo.filePath);
+        try {
+          if (!hasCachedThumbnail(photo.id)) {
+            await generateThumbnailFromPsd(absolutePath, photo.id);
+            db.update(photos)
+              .set({ hasThumbnail: true, thumbnailPath: getThumbnailPath(photo.id) })
+              .where(eq(photos.id, photo.id))
+              .run();
+          }
+          if (!hasCachedPreview(photo.id)) {
+            await generatePreviewFromPsd(absolutePath, photo.id);
+            db.update(photos)
+              .set({ hasPreview: true, previewPath: getPreviewPath(photo.id) })
+              .where(eq(photos.id, photo.id))
+              .run();
+          }
+        } catch {
+          // Non-fatal — preview will fall back to on-demand generation
+        }
+        progress.previewsDone++;
+      }
     }
 
     progress.phase = 'complete';

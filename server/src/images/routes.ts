@@ -64,13 +64,17 @@ export async function imageRoutes(app: FastifyInstance) {
         if (photo.format === 'psd') {
           await generateThumbnailFromPsd(absolutePath, photo.id);
         } else if (photo.format === 'raw') {
-          // Try embedded preview first
-          const embedded = await extractEmbeddedPreview(absolutePath);
-          if (embedded) {
-            await generateThumbnailFromBuffer(embedded, photo.id);
-          } else {
-            // Fallback: try sharp directly (works for some DNG files)
+          const isDng = photo.filename.toLowerCase().endsWith('.dng');
+          if (isDng) {
+            // Sharp's findBestSource handles DNG subIFDs better than embedded extraction
             await generateThumbnail(absolutePath, photo.id);
+          } else {
+            const embedded = await extractEmbeddedPreview(absolutePath);
+            if (embedded) {
+              await generateThumbnailFromBuffer(embedded, photo.id);
+            } else {
+              await generateThumbnail(absolutePath, photo.id);
+            }
           }
         } else {
           await generateThumbnail(absolutePath, photo.id);
@@ -116,11 +120,16 @@ export async function imageRoutes(app: FastifyInstance) {
         if (photo.format === 'psd') {
           await generatePreviewFromPsd(absolutePath, photo.id);
         } else if (photo.format === 'raw') {
-          const embedded = await extractEmbeddedPreview(absolutePath);
-          if (embedded) {
-            await generatePreviewFromBuffer(embedded, photo.id);
-          } else {
+          const isDng = photo.filename.toLowerCase().endsWith('.dng');
+          if (isDng) {
             await generatePreview(absolutePath, photo.id);
+          } else {
+            const embedded = await extractEmbeddedPreview(absolutePath);
+            if (embedded) {
+              await generatePreviewFromBuffer(embedded, photo.id);
+            } else {
+              await generatePreview(absolutePath, photo.id);
+            }
           }
         } else {
           await generatePreview(absolutePath, photo.id);

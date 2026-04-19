@@ -14,26 +14,20 @@ export function ImageDisplay({ photo }: ImageDisplayProps) {
       justifyContent: 'center',
       padding: 24,
       minHeight: 0,
+      overflow: 'hidden',
     }}>
-      <div style={{
-        lineHeight: 0,
-        maxWidth: '100%',
-        maxHeight: '100%',
-        borderRadius: 'var(--radius)',
-        overflow: 'hidden',
-        boxShadow: 'var(--shadow-ambient)',
-      }}>
-        <img
-          src={`/api/photos/${photo.id}/preview?v=${encodeURIComponent(photo.fileModifiedAt)}`}
-          alt={photo.title || photo.filename}
-          style={{
-            maxWidth: '100%',
-            maxHeight: '100%',
-            objectFit: 'contain',
-            display: 'block',
-          }}
-        />
-      </div>
+      <img
+        src={`/api/photos/${photo.id}/preview?v=${encodeURIComponent(photo.indexedAt)}`}
+        alt={photo.title || photo.filename}
+        style={{
+          maxWidth: '100%',
+          maxHeight: '100%',
+          objectFit: 'contain',
+          display: 'block',
+          borderRadius: 'var(--radius)',
+          boxShadow: 'var(--shadow-ambient)',
+        }}
+      />
     </div>
   );
 }
