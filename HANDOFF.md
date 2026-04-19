@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project | Photo Viewer |
-| Updated | 2026-04-09T14:00:00Z |
+| Updated | 2026-04-19T00:00:00Z |
 | Handoff type | Unspecified (general continuation) |
 | Status | Fully functional, production-ready on macOS |
 
@@ -15,11 +15,11 @@ Self-hosted multi-user photo viewer web app for browsing, viewing, and annotatin
 
 ## 3. Current Objective
 
-No specific feature in progress. The app is stable and usable. Recent work focused on: fixing a critical title/caption save bug (contentless FTS5 table), adding virtual scrolling, error toast notifications, slideshow enhancements (2s interval, loop/stop toggle), UI improvements (theme toggle on auth pages, back→gallery rename, fullscreen button repositioning), and thumbnail cache busting.
+No specific feature in progress. The app is stable and fully functional. Most recent work focused on: fixing image preview quality for DNG/NEF/PSB files, adding full PSB preview generation to the indexer pipeline, UI refinements (Settings layout, Viewer info button), and adding a Read Me documentation page accessible from all pages.
 
 ## 4. Current State
 
-The app builds and runs cleanly. All features listed below are operational. The production build is current (`npm run build` succeeds). **Git version control is now active** with 4 commits on the `main` branch.
+The app builds and runs cleanly. All features listed below are operational. The production build is current (`npm run build` succeeds). **Git version control is active** with 5 commits on the `main` branch.
 
 ### Tech Stack
 
@@ -32,7 +32,7 @@ The app builds and runs cleanly. All features listed below are operational. The 
 | Auth | Token-based via HTTP-only cookies, invite-only user system |
 | Metadata | XMP sidecar files, exiftool-vendored for EXIF reading |
 | Stories | `.story.md` Markdown sidecar files alongside photo originals |
-| Images | sharp for JPEG/PNG/TIFF/RAW thumbnails/previews; macOS `sips` + `qlmanage` + exiftool for PSD/PSB |
+| Images | sharp for JPEG/PNG/TIFF/RAW thumbnails/previews; macOS `sips` + `qlmanage` + ImageMagick for PSD/PSB |
 | Icons | lucide-react |
 | Hotkeys | react-hotkeys-hook |
 | Routing | react-router-dom v7 |
@@ -54,7 +54,7 @@ The app builds and runs cleanly. All features listed below are operational. The 
 - **Photo cards show filename**: The photo grid always shows `photo.filename`, never the title. Title is shown in the Viewer page.
 - **No-Line Rule**: No visible borders anywhere. Depth via tonal layering and ambient shadows.
 - **Pill-shaped primary buttons**: `border-radius: 9999px` with gradient backgrounds.
-- **Page names are fixed**: Library, Gallery, Viewer, Search, Activity, Settings, Login, Setup.
+- **Page names are fixed**: Library, Gallery, Viewer, Search, Activity, Settings, Login, Setup, Read Me.
 
 ## 6. Current Architecture and Run Commands
 
@@ -88,7 +88,7 @@ server/src/
   auth/             — cookie-based auth middleware and routes
   admin/            — user management, config, browse-directories
   photos/           — indexer, folder contents, photo queries, stats
-  images/           — thumbnail/preview generation (sharp, sips, qlmanage, exiftool)
+  images/           — thumbnail/preview generation (sharp, sips, qlmanage, ImageMagick, exiftool)
   metadata/         — XMP read/write, EXIF extraction, story file read/write
   activity/         — activity logging and feed
   search/           — full-text + filter search (contentless FTS5)
@@ -98,7 +98,8 @@ client/src/
   App.tsx           — Router, auth flow, page orchestration, ToastProvider
   api/client.ts     — fetch-based API client
   hooks/            — useAuth, useFolders, usePhotos, useTheme
-  pages/            — BrowsePage, ViewerPage, SearchPage, ActivityPage, AdminPage, SetupPage, LoginPage
+  pages/            — BrowsePage, ViewerPage, SearchPage, ActivityPage, AdminPage,
+                      SetupPage, LoginPage, ReadmePage
   components/
     layout/         — Breadcrumbs
     photos/         — FolderCard, PhotoCard, ThumbnailGrid (virtualized), ThumbnailStrip
@@ -131,41 +132,51 @@ Indices on: photos (folderPath, dateTaken, format), activity (createdAt, userId)
 | **Search** | SearchPage | Full-text search with date/annotation filters |
 | **Activity** | ActivityPage | Activity feed + annotation progress |
 | **Settings** | AdminPage | User management, storage config |
+| **Read Me** | ReadmePage | User documentation at `/readme` |
 | **Login** | EmailLoginPage / LoginPage | Email sign-in / invite acceptance |
 | **Setup** | SetupPage | First-time admin setup |
 
 ## 7. Preview / Format Support Status
 
-| Format | Thumbnail | Preview | Status |
-|--------|-----------|---------|--------|
+| Format | Thumbnail | Preview | Notes |
+|--------|-----------|---------|-------|
 | JPEG | ✅ sharp | ✅ sharp | Full support |
 | PNG | ✅ sharp | ✅ sharp | Full support |
 | TIFF | ✅ sharp | ✅ sharp | Full support |
-| RAW (NEF, CR2, CR3, ARW, RAF, ORF, RW2, DNG) | ✅ sharp | ✅ sharp | Full support |
-| PSD | ✅ sips/qlmanage/exiftool | ✅ sips/qlmanage/exiftool | macOS only, 3-tier fallback |
-| PSB | ⚠️ exiftool (~160px) | ⚠️ exiftool (~160px) | Low-res for 16-bit files |
+| NEF, CR2, CR3, ARW, RAF, ORF, RW2 | ✅ sharp (embedded JPEG) | ✅ sharp (embedded JPEG) | Full support |
+| DNG | ✅ sharp (findBestSource / subIFD) | ✅ sharp (findBestSource / subIFD) | Bypasses embedded extraction — uses TIFF subIFD |
+| PSD | ✅ sips → qlmanage → ImageMagick fallback | ✅ sips → qlmanage → ImageMagick fallback | macOS only, 3-tier |
+| PSB | ✅ ImageMagick `[0]` (~2s) | ✅ ImageMagick `[0]` (~2s) | Auto-generated at index time; 16-bit files need ImageMagick |
 
-## 8. Recent Fixes Already Landed
+### PSB/PSD preview generation pipeline
 
-1. **Title/caption save bug fixed**: The `updateFtsField` function was using `DELETE FROM photos_fts` on a contentless FTS5 table, which SQLite rejects. Fixed to use the FTS5 special `INSERT INTO photos_fts(photos_fts, ...) VALUES ('delete', ...)` command. Also reordered calls so FTS update reads old values before the DB update writes new ones.
-2. **Story delete bug fixed**: `fetchJson` was sending `Content-Type: application/json` on DELETE requests with no body, potentially causing Fastify to reject. Fixed to only set the header when a body is present.
-3. **Virtual scrolling integrated**: ThumbnailGrid now uses `@tanstack/react-virtual` to only render visible rows. Uses ResizeObserver for responsive column count. BrowsePage passes a `scrollContainerRef`.
-4. **Error toast notifications added**: Toast component (`client/src/components/shared/Toast.tsx`) with `ToastProvider` context and `useToast()` hook. All 6 mutations in InfoPanel have `onError` callbacks showing descriptive error messages.
-5. **Theme toggle on Login/Setup pages**: ThemeToggle positioned absolutely top-right on EmailLoginPage (in App.tsx), LoginPage (invite acceptance), and SetupPage.
-6. **Thumbnail cache busting**: Client appends `?v={fileModifiedAt}` (or `indexedAt` for folders) to all thumbnail/preview URLs. Server adds ETag headers derived from cached file mtime+size.
-7. **2-second slideshow interval**: Added `2` to `SLIDESHOW_INTERVALS` constant in shared/constants.ts. Dropdown now shows: 2s, 5s, 10s, 15s, 30s.
-8. **Slideshow loop/stop toggle**: New `loop` prop on SlideshowControls. Repeat icon = continuous loop, ArrowRightToLine icon = stop at last photo. When not looping, slideshow auto-pauses at the last photo.
-9. **Viewer back button renamed**: Changed from "← Back" to "← Gallery".
-10. **Fullscreen button repositioned**: Moved from absolute-positioned overlay at bottom of FullscreenWrapper to a dedicated `FullscreenButton` component rendered between the image and thumbnail strip. Uses React context shared with FullscreenWrapper.
-11. **Story save bug fixed** (earlier session): Added `key={localPhoto.id}` to InfoPanel, auto-save on unmount, ⌘Enter keyboard shortcut.
-12. **Viewer toolbar reorganised** (earlier session): Slideshow, Download, Info buttons in centred toolbar row.
-13. **Image responsive sizing** (earlier session): `max-width: 100%` / `max-height: 100%` within flex container.
+`convertPsdToBuffer` in `server/src/images/preview-generator.ts`:
+1. **Method 1: sips** — fast, works for standard 8-bit PSDs
+2. **Method 2: qlmanage** — macOS Quick Look, validates output with `isImageContentValid`
+3. **Method 3: ImageMagick** — handles 16-bit PSBs that sips/qlmanage can't read; uses `psd:${path}[0]` to read only the merged composite layer (~8× faster than all layers, ~2s per file)
 
-## 9. Known Open Issues to Recheck
+PSB previews are **automatically generated during the indexer's `'previews'` phase** — no manual step needed.
 
-1. **PSB thumbnail quality**: When sips and qlmanage both fail for 16-bit PSB files, the fallback uses the embedded PhotoshopThumbnail which is only ~160px. Installing ImageMagick would enable full-quality PSB conversion.
-2. **Story auto-save edge case**: If the API call from auto-save fails during unmount, the toast may not display (component already unmounted). The mutation fires but error recovery is limited.
-3. **Search uses contentless FTS5**: The `photos_fts` table is rebuilt on each index run (`DROP TABLE` + `CREATE`). Updates between indexing runs use the special `'delete'` command — any code modifying searchable fields must use this pattern (see `updateFtsField` in `server/src/metadata/routes.ts`).
+### Preview cache-busting
+
+All preview/thumbnail URLs append `?v=${photo.indexedAt}` (not `fileModifiedAt`). This ensures browsers fetch fresh images after any index run that regenerates previews. `indexedAt` changes on every index run.
+
+## 8. Recent Fixes (this session)
+
+1. **DNG previews too small** — `extractEmbeddedPreview` returned a small embedded JPEG. Fixed by detecting `.dng` extension in `server/src/images/routes.ts` and calling `generatePreview` directly (uses sharp's `findBestSource` to select the best TIFF subIFD).
+2. **NEF/image resize broken** — `ImageDisplay.tsx` had an inner wrapper `<div>` with `maxHeight: '100%'` causing a circular flex height dependency. Removed the wrapper; `<img>` is now a direct flex child of the `overflow: hidden` container. Image now correctly fits the viewport and responds to window resize.
+3. **PSB previews tiny (~160px)** — sips and qlmanage both fail for 16-bit PSB. The exiftool `PhotoshopThumbnail` fallback is only ~160px. Added ImageMagick as Method 3 using `psd:file[0]` (merged composite only — ~2s vs ~25s for all layers).
+4. **PSB previews not regenerated on index** — Added a `'previews'` phase to the indexer that finds all `format='psd'` photos missing cached previews/thumbnails and generates them. Progress is shown in the UI with a progress bar (same UI as the `'indexing'` phase).
+5. **Stale PSB previews after regeneration** — Browser cached the old tiny preview URL. Fixed by switching from `?v=fileModifiedAt` to `?v=indexedAt` in `ImageDisplay.tsx`.
+6. **Viewer "i" button** — Previously only showed blue accent when info panel was open. Now always shows blue background regardless of panel state.
+7. **Settings Storage Location layout** — `FolderPicker` path input now has `flex: 1, minWidth: 0` to fill available width. Update button moved to its own row so the path is fully readable.
+8. **Read Me documentation page** — New `ReadmePage` component at `/readme` route. Covers Library, Gallery, Viewer, Metadata & Stories, Search, Activity, Settings, Keyboard Shortcuts, and Supported File Formats. Accessible via a "Read Me" button integrated into the nav bar of every page (Browse, Viewer, Search, Activity).
+
+## 9. Known Open Issues
+
+1. **Story auto-save edge case**: If the API call from auto-save fails during unmount, the toast may not display (component already unmounted). The mutation fires but error recovery is limited.
+2. **Search uses contentless FTS5**: The `photos_fts` table is rebuilt on each index run. Any code modifying searchable fields (title, caption, story_text) must use the `updateFtsField` pattern with the special `'delete'` command — not a regular SQL DELETE.
+3. **No tests**: All validation is manual. Regressions are discovered by the user.
 
 ## 10. Validation Status
 
@@ -174,16 +185,19 @@ Indices on: photos (folderPath, dateTaken, format), activity (createdAt, userId)
 | `npm run build` | ✅ Passes (shared → client → server) |
 | Production server starts | ✅ Serves on port 3000 |
 | Login flow | ✅ Email-based login works |
-| Folder browsing | ✅ 47 folders indexed, navigation works |
+| Folder browsing | ✅ Navigation works |
 | Photo viewer | ✅ Image display, navigation, info panel all functional |
-| Title/caption save | ✅ Persists to XMP and database, survives navigation |
-| Story add/save | ✅ Stories persist to `.story.md` files, auto-save on navigate works |
-| Story delete | ✅ Fixed Content-Type header issue on bodyless DELETE |
+| Image resize on window change | ✅ Fixed (flex layout) |
+| DNG previews | ✅ Full-resolution via findBestSource |
+| PSB previews | ✅ Full-size via ImageMagick; auto-generated at index time |
+| Title/caption save | ✅ Persists to XMP and database |
+| Story add/save/delete | ✅ All operations work |
 | Slideshow | ✅ 2s/5s/10s/15s/30s intervals, loop/stop toggle |
-| Theme toggle | ✅ Available on all pages including Login/Setup, persists to localStorage |
+| Theme toggle | ✅ Available on all pages, persists to localStorage |
 | Virtual scrolling | ✅ ThumbnailGrid virtualized for large folders |
 | Error toasts | ✅ Show on mutation failures |
-| Git repo | ✅ Initialized, 4 commits on main |
+| Read Me page | ✅ Accessible from all pages via nav bar button |
+| Git repo | ✅ 5 commits on main |
 | Unit tests | ❌ None exist |
 
 ## 11. Files Most Likely to Matter Next
@@ -191,44 +205,48 @@ Indices on: photos (folderPath, dateTaken, format), activity (createdAt, userId)
 | File | Why |
 |------|-----|
 | `client/src/pages/ViewerPage.tsx` | Main viewer layout — slideshow, toolbar, fullscreen |
+| `client/src/components/viewer/ImageDisplay.tsx` | Image rendering, preview URL, cache-busting |
 | `client/src/components/viewer/InfoPanel.tsx` | Metadata editing + story management — all mutations here |
 | `client/src/components/viewer/StoryEditor.tsx` | Story input — auto-save, ⌘Enter, edit/delete |
-| `client/src/components/viewer/FullscreenWrapper.tsx` | Fullscreen context + button — recently refactored |
-| `client/src/components/viewer/SlideshowControls.tsx` | Slideshow interval + loop/stop toggle |
-| `client/src/components/photos/ThumbnailGrid.tsx` | Virtualized photo grid |
-| `client/src/components/shared/Toast.tsx` | Error notification system |
-| `client/src/components/shared/ThemeToggle.tsx` | Theme toggle — used on every page |
-| `client/src/App.tsx` | App root — ToastProvider, EmailLoginPage theme toggle |
+| `client/src/pages/ReadmePage.tsx` | User documentation — update when features change |
+| `client/src/pages/BrowsePage.tsx` | Library/Gallery — index progress UI |
+| `server/src/images/preview-generator.ts` | PSD/PSB conversion pipeline (sips → qlmanage → ImageMagick) |
+| `server/src/images/routes.ts` | Thumbnail/preview serving; DNG special-case handling |
+| `server/src/photos/indexer.ts` | Indexer phases: scanning → indexing → previews → complete |
 | `server/src/metadata/routes.ts` | All metadata API endpoints — FTS5 update logic here |
-| `server/src/images/routes.ts` | Thumbnail/preview serving with ETag headers |
 | `packages/shared/src/constants.ts` | Slideshow intervals, image dimensions, extensions |
 
 ## 12. Constraints and Non-Negotiables
 
-- **macOS required** for PSD/PSB support (uses `sips` and `qlmanage`)
+- **macOS required** for PSD/PSB support (uses `sips`, `qlmanage`, and optionally `magick`)
+- **ImageMagick must be installed** for PSB support (`brew install imagemagick`)
 - **Node.js v24** at `/Users/paulmarshall/.nvm/versions/node/v24.14.0/bin`
 - **Google Fonts dependency** — Space Grotesk and Plus Jakarta Sans loaded from CDN in `client/index.html`
 - **No secrets in code** — session secret is hardcoded as a default but should use `SESSION_SECRET` env var in production
-- **Contentless FTS5 constraint** — `photos_fts` table cannot use regular DELETE; must use the special `'delete'` command pattern (see `updateFtsField`)
+- **Contentless FTS5 constraint** — `photos_fts` table cannot use regular DELETE; must use the special `'delete'` command pattern (see `updateFtsField` in `server/src/metadata/routes.ts`)
 
 ## 13. Assumptions and Open Questions
 
 - **Assumption**: The app runs on a single macOS machine for personal/family use
 - **Assumption**: Photos are added to the filesystem externally; the app only reads/indexes
-- **Decision**: No bulk delete for stories — individual story deletion is the only supported flow.
+- **Decision**: No bulk delete for stories — individual story deletion is the only supported flow
+- **Decision**: No floating UI elements — all nav buttons (Read Me, theme toggle, etc.) are integrated into each page's existing header/nav bar
 
 ## 14. Risks and Cautions
 
 - **No tests**: All validation is manual. Regressions are discovered by the user.
-- **Story auto-save edge case**: If the API call from auto-save fails (e.g. network issue during unmount), the story text is lost silently. The mutation fires but has no error recovery during unmount.
 - **FTS5 update fragility**: Any new code that modifies title, caption, or other indexed fields must use the `updateFtsField` pattern with the contentless FTS5 `'delete'` command. Using regular SQL DELETE on `photos_fts` will throw an error.
+- **Story auto-save edge case**: If the API call from auto-save fails (e.g. network issue during unmount), the story text is lost silently.
+- **PSB indexing time**: Large PSB files take ~2s each via ImageMagick. Libraries with many PSB files will have a slow first index run.
 
 ## 15. Next Actions
 
 No specific next actions requested. Potential improvements:
-1. Add error toast notifications for failed mutations outside InfoPanel (e.g. login, indexing)
-2. Add unit/integration tests
-3. Add ETag/versioning to thumbnail URLs to prevent stale cache issues (client-side done, could add server-side revalidation)
+1. Add unit/integration tests for the server API (especially FTS5 logic)
+2. Add map view for photos with GPS EXIF data
+3. Add bulk annotation tools (e.g. apply a caption to a selection of photos)
+4. Support video files (MP4, MOV)
+5. Add per-folder annotation progress in the Library view
 
 ## 16. Ready-Made Prompt for Starting a New Thread
 
@@ -243,9 +261,11 @@ Key context:
 - Photos path: /Users/paulmarshall/Pictures/01 New/New Images
 - Admin email: jabulanison@gmail.com
 - Stories are saved to .story.md sidecar files, metadata to .xmp sidecar files
-- Git repo active, 4 commits on main
-- Recent work: fixed title/caption save (FTS5 bug), fixed story delete, added virtual scrolling, error toasts, slideshow enhancements (2s interval, loop/stop), theme toggle on auth pages, fullscreen button repositioned, back→gallery rename
+- Git repo active, 5 commits on main
+- Recent work: fixed DNG/NEF/PSB image previews, PSB auto-generation during indexing, image resize on window change, Viewer "i" button always blue, Settings layout fix, added Read Me documentation page on all pages
 - IMPORTANT: photos_fts is a contentless FTS5 table — use the special 'delete' command, not regular DELETE
+- IMPORTANT: DNG files bypass embedded extraction — use generatePreview() directly (findBestSource)
+- PSB previews use ImageMagick psd:file[0] — must have ImageMagick installed (brew install imagemagick)
 - No tests
 
 [Describe what you want to do next]
