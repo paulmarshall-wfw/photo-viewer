@@ -7,6 +7,8 @@ import { getPhotosPath } from '../admin/service.js';
 import { writeXmpField, readXmp } from './xmp.js';
 import { readStory, appendStory, editStory, deleteStory } from './story.js';
 import { logActivity } from '../activity/service.js';
+import { ensureFollowing } from '../follows/service.js';
+import { createNotifications } from '../notifications/service.js';
 
 function updateFtsField(photoId: string, field: 'title' | 'caption', value: string) {
   const sqlite = getSqlite();
@@ -52,6 +54,8 @@ export async function metadataRoutes(app: FastifyInstance) {
     updateFtsField(photo.id, 'title', title);
     db.update(photos).set({ title }).where(eq(photos.id, photo.id)).run();
     logActivity(request.user!.id, photo.id, 'set_title', JSON.stringify({ title }));
+    ensureFollowing(request.user!.id, photo.id);
+    createNotifications(photo.id, request.user!.id, 'set_title', title);
 
     return { success: true, title };
   });
@@ -72,6 +76,8 @@ export async function metadataRoutes(app: FastifyInstance) {
     updateFtsField(photo.id, 'caption', caption);
     db.update(photos).set({ caption }).where(eq(photos.id, photo.id)).run();
     logActivity(request.user!.id, photo.id, 'set_caption', JSON.stringify({ caption }));
+    ensureFollowing(request.user!.id, photo.id);
+    createNotifications(photo.id, request.user!.id, 'set_caption');
 
     return { success: true, caption };
   });
@@ -122,6 +128,8 @@ export async function metadataRoutes(app: FastifyInstance) {
     appendStory(absolutePath, photo.filename, userName, content);
     db.update(photos).set({ hasStory: true }).where(eq(photos.id, photo.id)).run();
     logActivity(request.user!.id, photo.id, 'add_story');
+    ensureFollowing(request.user!.id, photo.id);
+    createNotifications(photo.id, request.user!.id, 'add_story');
 
     return { success: true, entries: readStory(absolutePath) };
   });
@@ -148,6 +156,8 @@ export async function metadataRoutes(app: FastifyInstance) {
     if (!success) return reply.code(404).send({ error: 'Story entry not found' });
 
     logActivity(request.user!.id, photo.id, 'edit_story');
+    ensureFollowing(request.user!.id, photo.id);
+    createNotifications(photo.id, request.user!.id, 'edit_story');
     return { success: true, entries: readStory(absolutePath) };
   });
 
@@ -189,5 +199,20 @@ export async function metadataRoutes(app: FastifyInstance) {
 
     const xmp = readXmp(absolutePath);
     return { metadata: xmp };
+  });
+
+  // Update location (DB only, not XMP)
+  app.patch<{ Params: { id: string }; Body: { location: string } }>('/api/photos/:id/location', async (request, reply) => {
+    const db = getDb();
+    const photo = db.select().from(photos).where(eq(photos.id, request.params.id)).get();
+    if (!photo) return reply.code(404).send({ error: 'Photo not found' });
+
+    const location = (request.body.location ?? '').trim();
+    db.update(photos).set({ location: location || null }).where(eq(photos.id, photo.id)).run();
+    logActivity(request.user!.id, photo.id, 'set_location', JSON.stringify({ location }));
+    ensureFollowing(request.user!.id, photo.id);
+    createNotifications(photo.id, request.user!.id, 'set_location', location);
+
+    return { success: true, location };
   });
 }

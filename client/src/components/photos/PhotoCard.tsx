@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Heart, MessageCircle } from 'lucide-react';
 import type { Photo } from '@photo-viewer/shared';
 
 interface PhotoCardProps {
@@ -82,6 +83,20 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
             marginTop: 1,
           }}>
             {photo.caption}
+          </div>
+        )}
+        {((photo.reactionCount ?? 0) > 0 || (photo.commentCount ?? 0) > 0) && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+            {(photo.reactionCount ?? 0) > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Heart size={11} /> {photo.reactionCount}
+              </span>
+            )}
+            {(photo.commentCount ?? 0) > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <MessageCircle size={11} /> {photo.commentCount}
+              </span>
+            )}
           </div>
         )}
       </div>

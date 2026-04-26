@@ -7,6 +7,11 @@ import type {
   AnnotationProgress,
   SortField,
   SortOrder,
+  PeopleTag,
+  Reaction,
+  Comment,
+  Notification,
+  OnThisDayPhoto,
 } from './types.js';
 
 // Setup
@@ -64,6 +69,7 @@ export interface FolderContentsQuery {
   order?: SortOrder;
   page?: number;
   limit?: number;
+  personTag?: string;
 }
 
 export interface PhotoDetailResponse {
@@ -126,4 +132,59 @@ export interface ActivityResponse {
 export interface StatsResponse {
   global: AnnotationProgress;
   folder?: AnnotationProgress;
+}
+
+// Reactions
+export interface AddReactionRequest {
+  emoji: string;
+}
+
+export interface ReactionsResponse {
+  reactions: Reaction[];
+}
+
+// Comments
+export interface AddCommentRequest {
+  body: string;
+  parentCommentId?: string;
+}
+
+export interface CommentsResponse {
+  comments: Comment[];
+}
+
+// People tags
+export interface AddPeopleTagRequest {
+  name: string;
+}
+
+export interface PeopleTagsResponse {
+  tags: PeopleTag[];
+}
+
+export interface AllPeopleTagsResponse {
+  tags: PeopleTag[];
+}
+
+// Location
+export interface UpdateLocationRequest {
+  location: string;
+}
+
+// Follows
+export interface FollowStatusResponse {
+  following: boolean;
+}
+
+// Notifications
+export interface NotificationsResponse {
+  notifications: Notification[];
+  unreadCount: number;
+  total: number;
+}
+
+// On This Day
+export interface OnThisDayResponse {
+  photos: OnThisDayPhoto[];
+  dismissed: boolean;
 }

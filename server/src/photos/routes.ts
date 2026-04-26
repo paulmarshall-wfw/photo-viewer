@@ -33,16 +33,16 @@ export async function photoRoutes(app: FastifyInstance) {
   // Browse folder contents
   app.get<{
     Params: { '*': string };
-    Querystring: { sort?: SortField; order?: SortOrder; page?: string; limit?: string };
+    Querystring: { sort?: SortField; order?: SortOrder; page?: string; limit?: string; personTag?: string };
   }>('/api/folders/*', async (request) => {
     const folderPath = (request.params as any)['*'] || '';
-    const { sort, order, page: pageStr, limit: limitStr } = request.query;
+    const { sort, order, page: pageStr, limit: limitStr, personTag } = request.query;
     const page = parseInt(pageStr || '1', 10);
     const limit = Math.min(parseInt(limitStr || String(DEFAULT_PAGE_SIZE), 10), 500);
 
     const folder = getFolderByPath(folderPath);
     const subfolders = getSubfolders(folderPath);
-    const { items: photoList, total } = getPhotosInFolder(folderPath, sort, order, page, limit);
+    const { items: photoList, total } = getPhotosInFolder(folderPath, sort, order, page, limit, personTag);
     const breadcrumbs = getBreadcrumbs(folderPath);
 
     return {

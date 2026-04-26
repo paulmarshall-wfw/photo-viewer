@@ -106,7 +106,7 @@ export function getAllUsers() {
 
 export function loginByEmail(email: string): { user: typeof users.$inferSelect; sessionToken: string } | null {
   const db = getDb();
-  const user = db.select().from(users).where(eq(users.email, email)).get();
+  const user = db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).get();
   if (!user || user.revokedAt || !user.inviteAcceptedAt) return null;
 
   const sessionToken = nanoid(32);

@@ -1,0 +1,80 @@
+# Release workflow — triggered by pushing a tag matching v*.*.*
+# Builds a multi-arch image and publishes to GHCR with numbered tags only
+# (no `latest`). Also attaches `photo-viewer-deploy.zip` to the GitHub Release.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/photo-viewer
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # upload release assets
+      packages: write   # push to GHCR
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          MAJOR="${VERSION%%.*}"
+          REST="${VERSION#*.}"
+          MINOR="${REST%%.*}"
+          SHA_SHORT="$(git rev-parse --short HEAD)"
+          {
+            echo "version=$VERSION"
+            echo "major=$MAJOR"
+            echo "minor=$MAJOR.$MINOR"
+            echo "trace=g$SHA_SHORT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.minor }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.major }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}-${{ steps.version.outputs.trace }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Stage deploy bundle
+        run: |
+          mkdir -p dist
+          # Pin the deploy bundle's IMAGE_TAG default to this version
+          sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${{ steps.version.outputs.version }}/" deploy/.env.example
+          cp -r deploy photo-viewer-deploy
+          zip -r dist/photo-viewer-deploy.zip photo-viewer-deploy
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/photo-viewer-deploy.zip
+          generate_release_notes: true

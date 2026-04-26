@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { ArrowLeft, Download, BookOpen } from 'lucide-react';
+import { ArrowLeft, Download, BookOpen, Settings, Folder } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo, Theme, User } from '@photo-viewer/shared';
 import { ImageDisplay } from '../components/viewer/ImageDisplay.js';
@@ -9,7 +9,9 @@ import { SlideshowControls } from '../components/viewer/SlideshowControls.js';
 import { FullscreenWrapper, FullscreenButton } from '../components/viewer/FullscreenWrapper.js';
 import { InfoPanel } from '../components/viewer/InfoPanel.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
+import { NotificationBell } from '../components/shared/NotificationBell.js';
 import { useTheme } from '../hooks/useTheme.js';
+import { useLogout } from '../hooks/useAuth.js';
 
 interface ViewerPageProps {
   photo: Photo;
@@ -34,6 +36,7 @@ export function ViewerPage({
 }: ViewerPageProps) {
   const navigate = useNavigate();
   const { theme: currentTheme, toggleTheme } = useTheme();
+  const logout = useLogout();
   const [slideshowPlaying, setSlideshowPlaying] = useState(false);
   const [slideshowInterval, setSlideshowInterval] = useState(5);
   const [slideshowLoop, setSlideshowLoop] = useState(true);
@@ -102,34 +105,91 @@ export function ViewerPage({
             WebkitBackdropFilter: 'blur(24px)',
             borderBottom: '1px solid var(--glass-border)',
             flexShrink: 0,
+            position: 'relative',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
               <button className="btn btn-ghost" onClick={onBack} style={{ padding: '4px 8px' }}>
                 <ArrowLeft size={16} /> Gallery
-              </button>
-              <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Viewer</span>
-              <ThemeToggle theme={currentTheme} onToggle={toggleTheme} />
-              <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <BookOpen size={14} /> Read Me
               </button>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 {currentIndex + 1} of {allPhotos.length}
               </span>
             </div>
 
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em', color: localPhoto.title ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                {localPhoto.title || localPhoto.filename}
-              </div>
-              {localPhoto.title && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-                  {localPhoto.filename}
-                </div>
-              )}
+            <div style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.02em',
+              pointerEvents: 'none',
+            }}>
+              Viewer
             </div>
 
-            {/* Spacer to balance the left side */}
-            <div style={{ width: 120 }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <NotificationBell
+                onNavigateToPhoto={async (photoId) => {
+                  try {
+                    const res = await fetch(`/api/photos/${photoId}`, { credentials: 'include' });
+                    if (!res.ok) return;
+                    const body = await res.json();
+                    if (body?.photo) onPhotoChange(body.photo);
+                  } catch {}
+                }}
+              />
+              <ThemeToggle theme={currentTheme} onToggle={toggleTheme} />
+              {currentUser.role === 'admin' && (
+                <button className="btn btn-ghost" onClick={() => navigate('/admin')} style={{ padding: '4px 8px' }}>
+                  <Settings size={14} />
+                </button>
+              )}
+              <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <BookOpen size={14} /> Read Me
+              </button>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{currentUser.displayName}</span>
+              <button className="btn btn-ghost" onClick={() => logout.mutate()} style={{ padding: '4px 8px', fontSize: 13 }}>
+                Logout
+              </button>
+            </div>
+          </div>
+
+          {/* Title row: folder (left) + photo title (center) */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 20px 4px',
+            flexShrink: 0,
+            position: 'relative',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: 13, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Folder size={14} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {localPhoto.folderPath || 'Library'}
+              </span>
+            </div>
+            <div style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: 15,
+              fontWeight: 600,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '-0.02em',
+              color: localPhoto.title ? 'var(--text-primary)' : 'var(--text-muted)',
+              maxWidth: '60%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              textAlign: 'center',
+            }}>
+              {localPhoto.title || localPhoto.filename}
+            </div>
+            <div style={{ flex: 1 }} />
           </div>
 
           {/* Centred toolbar: slideshow, download, info */}
@@ -138,7 +198,7 @@ export function ViewerPage({
             justifyContent: 'center',
             alignItems: 'center',
             gap: 8,
-            padding: '8px 0',
+            padding: '4px 0 8px',
             flexShrink: 0,
           }}>
             <SlideshowControls

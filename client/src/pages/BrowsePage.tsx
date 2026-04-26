@@ -10,6 +10,8 @@ import { FolderCard } from '../components/photos/FolderCard.js';
 import { ThumbnailGrid } from '../components/photos/ThumbnailGrid.js';
 import { SearchBar } from '../components/search/SearchBar.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
+import { NotificationBell } from '../components/shared/NotificationBell.js';
+import { OnThisDayBanner } from '../components/shared/OnThisDayBanner.js';
 
 interface BrowsePageProps {
   folderPath: string;
@@ -85,13 +87,24 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
         top: 0,
         zIndex: 20,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 700, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>{folderPath ? 'Gallery' : 'Library'}</h1>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
           {data?.breadcrumbs && (
             <Breadcrumbs crumbs={data.breadcrumbs} onNavigate={onNavigate} />
           )}
         </div>
+        <h1 style={{
+          fontSize: 17,
+          fontWeight: 700,
+          fontFamily: 'var(--font-display)',
+          letterSpacing: '-0.02em',
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          margin: 0,
+          pointerEvents: 'none',
+        }}>
+          {folderPath ? 'Gallery' : 'Library'}
+        </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 200 }}>
             <SearchBar onSearch={onSearch} onClear={() => {}} isSearching={false} />
@@ -114,11 +127,23 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             <option value="filename-desc">Name Z-A</option>
             <option value="date-asc">Date oldest</option>
             <option value="date-desc">Date newest</option>
+            <option value="timeline-asc">Timeline</option>
             <option value="annotation-asc">Needs annotation</option>
           </select>
+          <NotificationBell
+            onNavigateToPhoto={async (photoId) => {
+              try {
+                const res = await fetch(`/api/photos/${photoId}`, { credentials: 'include' });
+                if (!res.ok) return;
+                const body = await res.json();
+                if (body?.photo) onPhotoSelect(body.photo, [body.photo]);
+              } catch {}
+            }}
+          />
           <button className="btn btn-ghost" onClick={onShowActivity} style={{ padding: '4px 8px' }} title="Activity">
             <Activity size={14} />
           </button>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
           {user.data?.role === 'admin' && (
             <button className="btn btn-ghost" onClick={() => navigate('/admin')} style={{ padding: '4px 8px' }}>
               <Settings size={14} />
@@ -198,6 +223,9 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
 
         {data && (
           <>
+            {/* On This Day — only at Library root */}
+            {!folderPath && <OnThisDayBanner />}
+
             {/* Subfolders */}
             {data.subfolders.length > 0 && (
               <section style={{ marginBottom: 24 }}>
@@ -223,7 +251,12 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
                   Photos ({data.totalPhotos})
                 </h2>
               )}
-              <ThumbnailGrid photos={data.photos} onPhotoClick={handlePhotoClick} scrollContainerRef={scrollContainerRef} />
+              <ThumbnailGrid
+                photos={data.photos}
+                onPhotoClick={handlePhotoClick}
+                scrollContainerRef={scrollContainerRef}
+                timeline={sort === 'timeline'}
+              />
             </section>
 
             {data.subfolders.length === 0 && data.photos.length === 0 && (

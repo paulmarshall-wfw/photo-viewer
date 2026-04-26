@@ -45,6 +45,7 @@ export const photos = sqliteTable('photos', {
   hasPreview: integer('has_preview', { mode: 'boolean' }).notNull().default(false),
   thumbnailPath: text('thumbnail_path'),
   previewPath: text('preview_path'),
+  location: text('location'),
   indexedAt: text('indexed_at').notNull(),
 }, (table) => [
   index('idx_photos_folder').on(table.folderPath),
@@ -63,3 +64,65 @@ export const activity = sqliteTable('activity', {
   index('idx_activity_created').on(table.createdAt),
   index('idx_activity_user').on(table.userId),
 ]);
+
+export const peopleTags = sqliteTable('people_tags', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+});
+
+export const photoPeopleTags = sqliteTable('photo_people_tags', {
+  photoId: text('photo_id').notNull(),
+  tagId: text('tag_id').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  index('idx_photo_people_tags_tag').on(table.tagId),
+]);
+
+export const reactions = sqliteTable('reactions', {
+  id: text('id').primaryKey(),
+  photoId: text('photo_id').notNull(),
+  userId: text('user_id').notNull(),
+  emoji: text('emoji').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  index('idx_reactions_photo').on(table.photoId),
+]);
+
+export const comments = sqliteTable('comments', {
+  id: text('id').primaryKey(),
+  photoId: text('photo_id').notNull(),
+  userId: text('user_id').notNull(),
+  parentCommentId: text('parent_comment_id'),
+  body: text('body').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  index('idx_comments_photo_created').on(table.photoId, table.createdAt),
+  index('idx_comments_parent').on(table.parentCommentId),
+]);
+
+export const photoFollows = sqliteTable('photo_follows', {
+  photoId: text('photo_id').notNull(),
+  userId: text('user_id').notNull(),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  index('idx_photo_follows_user').on(table.userId),
+]);
+
+export const notifications = sqliteTable('notifications', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  photoId: text('photo_id').notNull(),
+  actorId: text('actor_id').notNull(),
+  actionType: text('action_type').notNull(),
+  detail: text('detail'),
+  read: integer('read', { mode: 'boolean' }).notNull().default(false),
+  createdAt: text('created_at').notNull(),
+}, (table) => [
+  index('idx_notifications_user_read').on(table.userId, table.read),
+  index('idx_notifications_user_created').on(table.userId, table.createdAt),
+]);
+
+export const dismissedOnThisDay = sqliteTable('dismissed_on_this_day', {
+  userId: text('user_id').notNull(),
+  dismissedDate: text('dismissed_date').notNull(),
+});

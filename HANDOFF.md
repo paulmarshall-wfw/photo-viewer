@@ -5,268 +5,325 @@
 | Field | Value |
 |-------|-------|
 | Project | Photo Viewer |
-| Updated | 2026-04-19T00:00:00Z |
-| Handoff type | Unspecified (general continuation) |
-| Status | Fully functional, production-ready on macOS |
+| Version | 1.0.0 |
+| Updated | 2026-04-26 |
+| Handoff type | Implementation handoff |
+| Status | Feature-complete; Docker packaging done; ready to publish v1.0.0 to GHCR |
+| Branch | main |
+| Session scope | Docker packaging for self-install on a single LAN |
 
 ## 2. Executive Summary
 
-Self-hosted multi-user photo viewer web app for browsing, viewing, and annotating photos stored on a local filesystem. Photos are organized in folders. Metadata (titles, captions, dates, stories) is stored in XMP sidecar files (`.xmp`) and story files (`.story.md`) alongside originals. Supports JPEG, PNG, TIFF, RAW (Nikon NEF, Canon CR2/CR3, Sony ARW, Fuji RAF, Olympus ORF, Panasonic RW2, Adobe DNG), and Photoshop PSD/PSB files.
+Photo Viewer is a **self-hosted, single-tenant family photo annotation web app**, distributed as a **Docker image**. One trusted person per family runs the container on a Mac, PC, Linux box, or NAS that already runs Docker; everyone else opens it in a browser on the same LAN. Photo originals stay on the host (read-only bind mount); comments, reactions, captions, tags, and the user database live in a SQLite file in `./data` next to the compose file.
+
+The app is feature-complete at v1.0.0 — all five family storytelling features (Reactions & Comments, Photo Following & Notifications, On This Day, People & Places Tagging, Timeline View) shipped earlier this month, and this session added the full Docker packaging layer: `Dockerfile`, dev compose, recipient-facing `deploy/` bundle, install/upgrade scripts for macOS/Linux/Windows, and a GitHub Actions release workflow for multi-arch publish to GHCR. The image was built and smoke-tested locally; nothing has been pushed yet.
 
 ## 3. Current Objective
 
-No specific feature in progress. The app is stable and fully functional. Most recent work focused on: fixing image preview quality for DNG/NEF/PSB files, adding full PSB preview generation to the indexer pipeline, UI refinements (Settings layout, Viewer info button), and adding a Read Me documentation page accessible from all pages.
+**Immediate goal:** Publish v1.0.0 — push a `v1.0.0` git tag, let the release workflow build & publish the multi-arch image to GHCR, and verify the deploy bundle on at least one fresh host (Apple Silicon Mac).
+
+**Definition of done:**
+- `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.0` exists for both `linux/amd64` and `linux/arm64`.
+- `photo-viewer-deploy.zip` is attached to the GitHub Release.
+- A clean Mac runs `bash scripts/install.sh` against the bundle and reaches the Library page in under 10 minutes.
 
 ## 4. Current State
 
-The app builds and runs cleanly. All features listed below are operational. The production build is current (`npm run build` succeeds). **Git version control is active** with 5 commits on the `main` branch.
+### Working
+- Full photo browsing: Library → Gallery → Viewer
+- Title, caption, date editing (DB-only — XMP writeback was dropped during the social features build to simplify the multi-user story)
+- Comments (one level of threading), Reactions (emoji, attributed), People & Places tagging, Photo Following + in-app Notifications, On This Day banner, Timeline sort with year/decade markers
+- Full-text search (contentless FTS5)
+- Activity feed
+- Slideshow with configurable intervals + loop
+- Virtual scrolling in Gallery
+- Theme toggle (light/dark)
+- Auth: cookie-based, invite-only, email-only login (case-insensitive after the recent fix)
+- Image previews: JPEG, PNG, TIFF, RAW, DNG, PSD, PSB
+- Read Me documentation page
+- Containerised: builds clean, runs as non-root, listens on `:3000`, persists `./data` and reads `/library` read-only
 
-### Tech Stack
+### Not in v1
+- HTTPS on the LAN — README documents `mkcert` recipe; no built-in TLS
+- Map view for `location` (free text only)
+- Audio narration (postponed)
+- XMP writeback (dropped during social-features work — metadata lives in DB)
+- Multi-tenant cloud deployment (a separate plan, `enumerated-sleeping-simon.md`, exists if we ever go that direction; not in scope for v1)
+
+## 5. Locked Business Rules
+
+- **DB is source of truth** for all metadata in v1 (title, caption, date, location, tags, reactions, comments). XMP writeback was dropped — `exiftool-vendored` stays for *reading* EXIF during indexing only.
+- **Photo cards show filename**, never the title.
+- **No-Line Rule**: no visible borders; depth via tonal layering and ambient shadows only.
+- **Pill-shaped primary buttons**: `border-radius: 9999px` with gradient backgrounds.
+- **Page names are fixed**: Library, Gallery, Viewer, Search, Activity, Settings, Login, Setup, Read Me.
+- **Contentless FTS5** — `photos_fts` cannot use regular DELETE. Must use the special `'delete'` command (see `updateFtsField` in `server/src/metadata/routes.ts`). Social features do not touch FTS5.
+- **Notifications** never fan out to the actor.
+- **Reactions** are attributed (show who reacted, not just a count).
+- **One level of comment threading** — replies cannot have their own replies.
+- **"On This Day" date source**: user-assigned `dateTaken` first, EXIF fallback. Per-user dismissal lives in `dismissed_on_this_day`, keyed by calendar date.
+- **Library mount is read-only.** The container never writes back to the photo files.
+- **Never use `:latest`.** Numbered tags only — enforced by the `docker-build-and-publish` skill.
+
+## 6. Run Commands
+
+### Dev (host node, no Docker)
+
+```bash
+npm install
+npm run build
+npm start                   # production-style; serves API + client on :3000
+npm run dev                 # watch mode (concurrent server + vite)
+```
+
+### Dev (Docker, builds locally)
+
+```bash
+docker compose up -d        # uses repo-root docker-compose.yml; builds photo-viewer:1.0.0
+docker compose logs -f
+```
+
+### Distribute / install (recipient flow)
+
+Recipient downloads `photo-viewer-deploy.zip` from the GitHub Release, extracts, and runs:
+
+```bash
+bash scripts/install.sh                # macOS / Linux / NAS via SSH
+powershell -File scripts/install.ps1   # Windows
+```
+
+The script prompts for library path + port, generates `SESSION_SECRET`, `docker compose pull && up -d`, then `docker compose exec photo-viewer node /app/scripts/create-admin.mjs` to bootstrap the first admin.
+
+### Publish (release flow — Build Mode skill defaults)
+
+Stays in **Build Mode** by default per the `docker-build-and-publish` skill. To enter Release Mode:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+That triggers `.github/workflows/release.yml` which builds multi-arch (`linux/amd64,linux/arm64`), pushes numbered tags `1.0.0 / 1.0 / 1 / 1.0.0-g<sha>` to `ghcr.io/paulmarshall-wfw/photo-viewer`, and attaches `photo-viewer-deploy.zip` to the release.
+
+## 7. Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Monorepo | npm workspaces (`packages/shared`, `server`, `client`) |
-| Server | Fastify v5, fastify-plugin for global hooks |
+| Server | Fastify v5 + Node 20 |
 | Database | SQLite via better-sqlite3 + Drizzle ORM |
 | Client | React 19 + Vite 6 + TypeScript + TanStack Query v5 |
-| Auth | Token-based via HTTP-only cookies, invite-only user system |
-| Metadata | XMP sidecar files, exiftool-vendored for EXIF reading |
-| Stories | `.story.md` Markdown sidecar files alongside photo originals |
-| Images | sharp for JPEG/PNG/TIFF/RAW thumbnails/previews; macOS `sips` + `qlmanage` + ImageMagick for PSD/PSB |
+| Auth | HTTP-only cookies, invite-only, case-insensitive email login |
+| Metadata | DB-only (DB is source of truth) |
+| EXIF reading | exiftool-vendored (read only — no writeback in v1) |
+| Images | sharp + ImageMagick (PSD/PSB); macOS sips/qlmanage path retained for host-node dev only |
+| Container | Node 20 Alpine, ImageMagick + libvips, non-root `node` user, tini PID 1 |
+| Distribution | GHCR, multi-arch (amd64 + arm64), GitHub Actions release workflow, `latest` forbidden |
 | Icons | lucide-react |
-| Hotkeys | react-hotkeys-hook |
 | Routing | react-router-dom v7 |
 | Virtual scrolling | @tanstack/react-virtual |
 
-### Environment
-
-- Node.js: `/Users/paulmarshall/.nvm/versions/node/v24.14.0/bin`
-- Project root: `/Users/paulmarshall/Software by Claude/Photo Viewer/`
-- Photos path: `/Users/paulmarshall/Pictures/01 New/New Images`
-- Database: `server/data/photo-viewer.db`
-- Cache (thumbnails/previews): `server/data/cache/`
-- Admin email: `jabulanison@gmail.com`
-
-## 5. Locked Business Rules
-
-- **XMP is source of truth**: All user-edited metadata (title, caption, date) is written to XMP sidecar files. The database is a read-cache/index only.
-- **Stories in `.story.md` files**: Story entries are stored in Markdown sidecar files (`<photo>.story.md`) with frontmatter and `## Author — Date` headings. Not stored in the database (only `hasStory` flag).
-- **Photo cards show filename**: The photo grid always shows `photo.filename`, never the title. Title is shown in the Viewer page.
-- **No-Line Rule**: No visible borders anywhere. Depth via tonal layering and ambient shadows.
-- **Pill-shaped primary buttons**: `border-radius: 9999px` with gradient backgrounds.
-- **Page names are fixed**: Library, Gallery, Viewer, Search, Activity, Settings, Login, Setup, Read Me.
-
-## 6. Current Architecture and Run Commands
-
-```bash
-# Install deps (from project root)
-npm install
-
-# Build all (shared must build first)
-npm run build
-
-# Start production server (serves both API and client on port 3000)
-npm start
-
-# Dev mode (concurrent server + vite dev server)
-npm run dev
-```
-
-### Project Structure
+## 8. Project Structure (after this session)
 
 ```
-packages/shared/src/
-  types.ts          — User, Photo, Folder, StoryEntry, ActivityEntry, ImageFormat, SortField
-  constants.ts      — SUPPORTED_EXTENSIONS, image dimensions, session config, slideshow intervals
-  api-types.ts      — API request/response types
-  index.ts          — barrel export
+packages/shared/src/   types.ts, api-types.ts, constants.ts
 
 server/src/
-  index.ts          — entry point
-  app.ts            — Fastify app setup, plugin registration, static file serving
-  config.ts         — port, dataDir, dbPath, cacheDir paths
-  auth/             — cookie-based auth middleware and routes
-  admin/            — user management, config, browse-directories
-  photos/           — indexer, folder contents, photo queries, stats
-  images/           — thumbnail/preview generation (sharp, sips, qlmanage, ImageMagick, exiftool)
-  metadata/         — XMP read/write, EXIF extraction, story file read/write
-  activity/         — activity logging and feed
-  search/           — full-text + filter search (contentless FTS5)
-  db/               — Drizzle schema, SQLite connection, migrations
+  index.ts             entry point
+  app.ts               Fastify app + plugins + SPA fallback
+  config.ts            port, host, DATA_DIR, dbPath, cacheDir
+  auth/                cookie auth + email-only login (case-insensitive)
+  admin/               user management, /api/setup, browse-directories
+  photos/              indexer, folder contents, photo queries, stats
+  images/              thumbnail/preview pipeline (sharp + ImageMagick)
+  metadata/            EXIF read, title/caption/date/location/tags
+  activity/            activity feed
+  search/              FTS5 search
+  reactions/  comments/  tags/  follows/  notifications/  on-this-day/
+  db/                  Drizzle schema + SQL migrations + connection
 
 client/src/
-  App.tsx           — Router, auth flow, page orchestration, ToastProvider
-  api/client.ts     — fetch-based API client
-  hooks/            — useAuth, useFolders, usePhotos, useTheme
-  pages/            — BrowsePage, ViewerPage, SearchPage, ActivityPage, AdminPage,
-                      SetupPage, LoginPage, ReadmePage
+  App.tsx              router, auth flow, ToastProvider
+  api/client.ts        fetch-based API client
+  hooks/               useAuth, useFolders, usePhotos, useTheme,
+                       useReactions, useComments, usePeopleTags,
+                       usePhotoFollow, useNotifications, useOnThisDay
+  pages/               BrowsePage, ViewerPage, SearchPage, ActivityPage,
+                       AdminPage, SetupPage, ReadmePage, etc.
   components/
-    layout/         — Breadcrumbs
-    photos/         — FolderCard, PhotoCard, ThumbnailGrid (virtualized), ThumbnailStrip
-    viewer/         — ImageDisplay, InfoPanel, InlineEdit, StoryEditor, FullscreenWrapper, SlideshowControls
-    search/         — SearchBar, FilterPanel
-    shared/         — ErrorBoundary, FolderPicker, ProgressBar, ThemeToggle, Toast
-  styles/           — variables.css (design tokens), global.css (base styles)
+    layout/            Breadcrumbs
+    photos/            FolderCard, PhotoCard (with reaction/comment badges),
+                       ThumbnailGrid, ThumbnailStrip, ReactionBar,
+                       CommentThread, PeopleTagInput
+    viewer/            ImageDisplay, InfoPanel (filename → metadata →
+                       reactions → comments layout), InlineEdit,
+                       FullscreenWrapper, SlideshowControls
+    shared/            ErrorBoundary, FolderPicker, ProgressBar,
+                       ThemeToggle, NotificationBell, OnThisDayBanner, Toast
+  styles/              variables.css (tokens), global.css
+
+# Containerisation (added this session)
+Dockerfile             multi-stage: Alpine builder + runtime, non-root, tini
+.dockerignore
+docker-compose.yml     dev/test (build: .)
+scripts/
+  create-admin.mjs     interactive/CLI admin bootstrap; runs inside container
+deploy/                shipped to recipients as photo-viewer-deploy.zip
+  docker-compose.yml   image: ghcr.io/paulmarshall-wfw/photo-viewer:${IMAGE_TAG:-1.0.0}
+  .env.example
+  scripts/install.sh   install.ps1  upgrade.sh  upgrade.ps1
+  README-INSTALL.md    end-user setup guide (Mac/Win/Linux/Synology/QNAP)
+.github/workflows/
+  release.yml          multi-arch GHCR push on v*.*.* tag, numbered tags only
 ```
 
-### Database Schema
+## 9. Container Layout
 
-5 tables via Drizzle ORM on SQLite:
+| Inside container | What |
+|------------------|------|
+| `/app/server/dist` | compiled server JS |
+| `/app/server/node_modules` | production deps (sharp, better-sqlite3, fastify) |
+| `/app/server/data` | **bind mount target** — SQLite DB + previews cache; persisted on host as `./data` |
+| `/app/client/dist` | built React SPA (served by fastify-static) |
+| `/app/scripts/create-admin.mjs` | first-run admin bootstrap |
+| `/library` | **bind mount target, read-only** — host path from `LIBRARY_PATH` env |
+| `node` (uid 1000) | non-root runtime user |
+| `tini` | PID 1 (signal handling) |
 
-- **configTable** — key/value system config (e.g. photos path)
-- **users** — id, email, displayName, role (admin/user), sessionToken, inviteToken, inviteAcceptedAt, revokedAt, createdAt
-- **folders** — id, path, name, parentPath, photoCount, firstPhotoId, indexedAt
-- **photos** — id, folderPath, filename, filePath, fileSize, fileModifiedAt, format, width, height, title, caption, dateTaken, hasStory, hasThumbnail, hasPreview, thumbnailPath, previewPath, indexedAt
-- **activity** — id, userId, photoId, action, detail, createdAt
-- **photos_fts** — contentless FTS5 virtual table indexing title, caption, story_text, folder_name, filename (requires special `'delete'` command for updates, not regular DELETE)
+`DATA_DIR=/app/server/data` is required because `app.ts` resolves `clientDist` as `path.resolve(DATA_DIR, '../../client/dist')`. Don't change `DATA_DIR` without updating that resolution or the static SPA stops serving.
 
-Indices on: photos (folderPath, dateTaken, format), activity (createdAt, userId)
+## 10. Recent Fixes Already Landed
 
-### Page Names
+This session and the immediately preceding ones:
 
-| Page | Component | Description |
-|------|-----------|-------------|
-| **Library** | BrowsePage (root) | All folders with photo counts |
-| **Gallery** | BrowsePage (in folder) | Photo grid for a specific folder (virtualized) |
-| **Viewer** | ViewerPage | Single photo with slideshow, thumbnail strip, info panel |
-| **Search** | SearchPage | Full-text search with date/annotation filters |
-| **Activity** | ActivityPage | Activity feed + annotation progress |
-| **Settings** | AdminPage | User management, storage config |
-| **Read Me** | ReadmePage | User documentation at `/readme` |
-| **Login** | EmailLoginPage / LoginPage | Email sign-in / invite acceptance |
-| **Setup** | SetupPage | First-time admin setup |
+1. **Email login case-insensitive** — `loginByEmail` now `.trim().toLowerCase()`s the input before matching. Was rejecting `Jabulanison@gmail.com` against a stored `jabulanison@gmail.com`.
+2. **fastify-static SPA fallback** — removed `wildcard: false` so `/assets/*.js` is actually served instead of being swallowed by the SPA `index.html` fallback.
+3. **InfoPanel redesign** — Stories removed; layout reordered to `filename → file metadata → reactions → spacer → metadata fields → comments`. Date+Time sit side-by-side.
+4. **BrowsePage header** — page title centred, breadcrumbs left, theme toggle moved next to settings on the right.
+5. **ViewerPage header** — "Viewer" centred at top, photo title + folder pill below the divider, NotificationBell + theme toggle + settings + username + Logout in the same positions as BrowsePage.
+6. **Docker packaging** (this session) — full `Dockerfile`, dev + recipient compose, install/upgrade scripts, GitHub Actions release workflow, README-INSTALL with NAS-specific walkthroughs.
+7. **DATA_DIR fix during smoke test** — moved from `/app/data` to `/app/server/data` so the relative SPA path resolves correctly.
 
-## 7. Preview / Format Support Status
-
-| Format | Thumbnail | Preview | Notes |
-|--------|-----------|---------|-------|
-| JPEG | ✅ sharp | ✅ sharp | Full support |
-| PNG | ✅ sharp | ✅ sharp | Full support |
-| TIFF | ✅ sharp | ✅ sharp | Full support |
-| NEF, CR2, CR3, ARW, RAF, ORF, RW2 | ✅ sharp (embedded JPEG) | ✅ sharp (embedded JPEG) | Full support |
-| DNG | ✅ sharp (findBestSource / subIFD) | ✅ sharp (findBestSource / subIFD) | Bypasses embedded extraction — uses TIFF subIFD |
-| PSD | ✅ sips → qlmanage → ImageMagick fallback | ✅ sips → qlmanage → ImageMagick fallback | macOS only, 3-tier |
-| PSB | ✅ ImageMagick `[0]` (~2s) | ✅ ImageMagick `[0]` (~2s) | Auto-generated at index time; 16-bit files need ImageMagick |
-
-### PSB/PSD preview generation pipeline
-
-`convertPsdToBuffer` in `server/src/images/preview-generator.ts`:
-1. **Method 1: sips** — fast, works for standard 8-bit PSDs
-2. **Method 2: qlmanage** — macOS Quick Look, validates output with `isImageContentValid`
-3. **Method 3: ImageMagick** — handles 16-bit PSBs that sips/qlmanage can't read; uses `psd:${path}[0]` to read only the merged composite layer (~8× faster than all layers, ~2s per file)
-
-PSB previews are **automatically generated during the indexer's `'previews'` phase** — no manual step needed.
-
-### Preview cache-busting
-
-All preview/thumbnail URLs append `?v=${photo.indexedAt}` (not `fileModifiedAt`). This ensures browsers fetch fresh images after any index run that regenerates previews. `indexedAt` changes on every index run.
-
-## 8. Recent Fixes (this session)
-
-1. **DNG previews too small** — `extractEmbeddedPreview` returned a small embedded JPEG. Fixed by detecting `.dng` extension in `server/src/images/routes.ts` and calling `generatePreview` directly (uses sharp's `findBestSource` to select the best TIFF subIFD).
-2. **NEF/image resize broken** — `ImageDisplay.tsx` had an inner wrapper `<div>` with `maxHeight: '100%'` causing a circular flex height dependency. Removed the wrapper; `<img>` is now a direct flex child of the `overflow: hidden` container. Image now correctly fits the viewport and responds to window resize.
-3. **PSB previews tiny (~160px)** — sips and qlmanage both fail for 16-bit PSB. The exiftool `PhotoshopThumbnail` fallback is only ~160px. Added ImageMagick as Method 3 using `psd:file[0]` (merged composite only — ~2s vs ~25s for all layers).
-4. **PSB previews not regenerated on index** — Added a `'previews'` phase to the indexer that finds all `format='psd'` photos missing cached previews/thumbnails and generates them. Progress is shown in the UI with a progress bar (same UI as the `'indexing'` phase).
-5. **Stale PSB previews after regeneration** — Browser cached the old tiny preview URL. Fixed by switching from `?v=fileModifiedAt` to `?v=indexedAt` in `ImageDisplay.tsx`.
-6. **Viewer "i" button** — Previously only showed blue accent when info panel was open. Now always shows blue background regardless of panel state.
-7. **Settings Storage Location layout** — `FolderPicker` path input now has `flex: 1, minWidth: 0` to fill available width. Update button moved to its own row so the path is fully readable.
-8. **Read Me documentation page** — New `ReadmePage` component at `/readme` route. Covers Library, Gallery, Viewer, Metadata & Stories, Search, Activity, Settings, Keyboard Shortcuts, and Supported File Formats. Accessible via a "Read Me" button integrated into the nav bar of every page (Browse, Viewer, Search, Activity).
-
-## 9. Known Open Issues
-
-1. **Story auto-save edge case**: If the API call from auto-save fails during unmount, the toast may not display (component already unmounted). The mutation fires but error recovery is limited.
-2. **Search uses contentless FTS5**: The `photos_fts` table is rebuilt on each index run. Any code modifying searchable fields (title, caption, story_text) must use the `updateFtsField` pattern with the special `'delete'` command — not a regular SQL DELETE.
-3. **No tests**: All validation is manual. Regressions are discovered by the user.
-
-## 10. Validation Status
+## 11. Validation Status
 
 | Check | Status |
 |-------|--------|
-| `npm run build` | ✅ Passes (shared → client → server) |
-| Production server starts | ✅ Serves on port 3000 |
-| Login flow | ✅ Email-based login works |
-| Folder browsing | ✅ Navigation works |
-| Photo viewer | ✅ Image display, navigation, info panel all functional |
-| Image resize on window change | ✅ Fixed (flex layout) |
-| DNG previews | ✅ Full-resolution via findBestSource |
-| PSB previews | ✅ Full-size via ImageMagick; auto-generated at index time |
-| Title/caption save | ✅ Persists to XMP and database |
-| Story add/save/delete | ✅ All operations work |
-| Slideshow | ✅ 2s/5s/10s/15s/30s intervals, loop/stop toggle |
-| Theme toggle | ✅ Available on all pages, persists to localStorage |
-| Virtual scrolling | ✅ ThumbnailGrid virtualized for large folders |
-| Error toasts | ✅ Show on mutation failures |
-| Read Me page | ✅ Accessible from all pages via nav bar button |
-| Git repo | ✅ 5 commits on main |
-| Unit tests | ❌ None exist |
+| `npm run build` | ✅ Passes |
+| `docker build .` | ✅ Passes (Apple Silicon, single-arch) |
+| Container starts and `/api/health` responds | ✅ |
+| SPA `index.html` (700 bytes) served at `/` | ✅ |
+| `/api/setup/status` returns `{needsSetup: true}` on fresh DB | ✅ |
+| `create-admin.mjs --email --name --library` end-to-end | ✅ |
+| Migrations run on first start | ✅ |
+| Multi-arch build (amd64 + arm64) | ❌ Not yet — requires the release workflow on GHA |
+| Recipient install on a clean Mac | ❌ Not yet — verification step 1 of the plan |
+| NAS install (Synology / QNAP) | ❌ Not yet |
 
-## 11. Files Most Likely to Matter Next
+## 12. Files Most Likely to Matter Next
 
+### If publishing v1.0.0
 | File | Why |
 |------|-----|
-| `client/src/pages/ViewerPage.tsx` | Main viewer layout — slideshow, toolbar, fullscreen |
-| `client/src/components/viewer/ImageDisplay.tsx` | Image rendering, preview URL, cache-busting |
-| `client/src/components/viewer/InfoPanel.tsx` | Metadata editing + story management — all mutations here |
-| `client/src/components/viewer/StoryEditor.tsx` | Story input — auto-save, ⌘Enter, edit/delete |
-| `client/src/pages/ReadmePage.tsx` | User documentation — update when features change |
-| `client/src/pages/BrowsePage.tsx` | Library/Gallery — index progress UI |
-| `server/src/images/preview-generator.ts` | PSD/PSB conversion pipeline (sips → qlmanage → ImageMagick) |
-| `server/src/images/routes.ts` | Thumbnail/preview serving; DNG special-case handling |
-| `server/src/photos/indexer.ts` | Indexer phases: scanning → indexing → previews → complete |
-| `server/src/metadata/routes.ts` | All metadata API endpoints — FTS5 update logic here |
-| `packages/shared/src/constants.ts` | Slideshow intervals, image dimensions, extensions |
+| `.github/workflows/release.yml` | The release pipeline. Multi-arch GHCR push + asset upload. |
+| `deploy/.env.example` | The release workflow `sed`s `IMAGE_TAG` here to pin the deploy bundle to the published version. |
+| `deploy/docker-compose.yml` | What recipients run. Pulls the published image. |
+| `Dockerfile` | If a build fails on amd64, this is where to look. |
 
-## 12. Constraints and Non-Negotiables
+### If onboarding a real family
+| File | Why |
+|------|-----|
+| `deploy/README-INSTALL.md` | The doc the recipient reads. NAS-specific walkthroughs live here. |
+| `deploy/scripts/install.sh` / `install.ps1` | Single-command bootstrap for the recipient. |
+| `scripts/create-admin.mjs` | First admin user bootstrap inside the container. |
 
-- **macOS required** for PSD/PSB support (uses `sips`, `qlmanage`, and optionally `magick`)
-- **ImageMagick must be installed** for PSB support (`brew install imagemagick`)
-- **Node.js v24** at `/Users/paulmarshall/.nvm/versions/node/v24.14.0/bin`
-- **Google Fonts dependency** — Space Grotesk and Plus Jakarta Sans loaded from CDN in `client/index.html`
-- **No secrets in code** — session secret is hardcoded as a default but should use `SESSION_SECRET` env var in production
-- **Contentless FTS5 constraint** — `photos_fts` table cannot use regular DELETE; must use the special `'delete'` command pattern (see `updateFtsField` in `server/src/metadata/routes.ts`)
+### If extending features
+| File | Why |
+|------|-----|
+| `server/src/db/schema.ts` | All Drizzle tables. |
+| `server/src/db/migrations/*.sql` | Manual SQL migrations applied at startup by `migrate.ts`. |
+| `server/src/notifications/service.ts` | Notification fan-out pattern (don't notify the actor). |
+| `client/src/components/viewer/InfoPanel.tsx` | The largest UI surface for per-photo affordances. |
 
-## 13. Assumptions and Open Questions
+## 13. Constraints and Non-Negotiables
 
-- **Assumption**: The app runs on a single macOS machine for personal/family use
-- **Assumption**: Photos are added to the filesystem externally; the app only reads/indexes
-- **Decision**: No bulk delete for stories — individual story deletion is the only supported flow
-- **Decision**: No floating UI elements — all nav buttons (Read Me, theme toggle, etc.) are integrated into each page's existing header/nav bar
+- **Docker is the supported distribution channel.** Don't add a non-Docker installer story to v1.
+- **Never use `:latest`.** Per the `docker-build-and-publish` skill (v6.1). Numbered tags only: `1.0.0`, `1.0`, `1`, `1.0.0-g<sha>`.
+- **Stay in Build Mode by default.** Don't bump `VERSION`, don't touch `CHANGELOG.md`, don't create git tags unless the user explicitly asks for a release.
+- **Library mount is read-only.** No code path may write into `/library`.
+- **Migration at startup** — new tables created via the SQL files in `server/src/db/migrations/`. Test on a copy first.
+- **Contentless FTS5** — `photos_fts` requires the special `'delete'` command. Social features must not touch this table.
+- **No notification fan-out to actor** — always exclude `actorId` from inserts.
+- **SQLite NULLS LAST** — use the `CASE WHEN date_taken IS NULL THEN 1 ELSE 0 END` workaround.
+- **Google Fonts CDN** — Space Grotesk + Plus Jakarta Sans loaded from `client/index.html`. Air-gapped installs will see fallback fonts.
+- **No secrets in code** — `SESSION_SECRET` env var; install script generates one.
 
-## 14. Risks and Cautions
+## 14. Known Open Issues
 
-- **No tests**: All validation is manual. Regressions are discovered by the user.
-- **FTS5 update fragility**: Any new code that modifies title, caption, or other indexed fields must use the `updateFtsField` pattern with the contentless FTS5 `'delete'` command. Using regular SQL DELETE on `photos_fts` will throw an error.
-- **Story auto-save edge case**: If the API call from auto-save fails (e.g. network issue during unmount), the story text is lost silently.
-- **PSB indexing time**: Large PSB files take ~2s each via ImageMagick. Libraries with many PSB files will have a slow first index run.
+1. **Image size 707 MB.** Acceptable for v1 but trim-able: vips ships in both builder and runtime, sharp prebuilds are large, exiftool ships its own perl runtime. Worth a follow-up if pulls become painful.
+2. **`@vitejs` dir lingers in `/app/node_modules`** after `npm prune --omit=dev`. Cosmetic — does not affect runtime. The skill's "image hygiene" verification step still flags it.
+3. **No tests.** All validation is manual.
+4. **HTTPS not built in.** README points at `mkcert`; no Caddy sidecar shipped yet.
+5. **NAS UI walkthroughs in README are unverified** — written from documentation, not tested on real Synology/QNAP devices.
+6. **Story auto-save on unmount** — pre-existing edge case from earlier sessions; left alone.
 
-## 15. Next Actions
+## 15. Risks and Cautions
 
-No specific next actions requested. Potential improvements:
-1. Add unit/integration tests for the server API (especially FTS5 logic)
-2. Add map view for photos with GPS EXIF data
-3. Add bulk annotation tools (e.g. apply a caption to a selection of photos)
-4. Support video files (MP4, MOV)
-5. Add per-folder annotation progress in the Library view
+- **First multi-arch build may surface arm64-specific native module issues.** Watch the GHA build logs for `better-sqlite3` and `sharp` failures. The builder stage installs `python3 make g++ vips-dev` so a fallback compile works.
+- **Migration corruption on existing DBs.** New migrations are additive (`CREATE TABLE IF NOT EXISTS`), but always test against a copy.
+- **Recipient confusion on NAS.** Synology/QNAP UIs differ across DSM versions. Be ready to update the README after first real NAS install.
+- **Release Mode requires explicit user intent.** Per the skill, don't auto-release on a request like "publish this" without confirming the version bump and changelog implications.
 
-## 16. Ready-Made Prompt for Starting a New Thread
+## 16. Next Actions
+
+### Now
+1. Push the v1.0.0 tag (`git tag v1.0.0 && git push origin v1.0.0`) once you're ready to release.
+2. Verify the GHA release succeeds and both arches are pushed to GHCR.
+3. Run `bash scripts/install.sh` from the published `photo-viewer-deploy.zip` on this Mac end-to-end.
+
+### Soon
+4. Onboard the first real family (Marshall household) using the published bundle.
+5. Verify NAS installs on at least one Synology and/or QNAP.
+6. Add a Caddy reverse-proxy compose snippet for HTTPS as v1.1.
+
+### Blocked
+- Nothing.
+
+### Later (P1)
+- Map view for `location`.
+- Face region tagging.
+- Audio narration (separate spec).
+- People tag merge tool.
+- Weekly digest notifications.
+- Cloud multi-tenant deployment (see `~/.claude/plans/enumerated-sleeping-simon.md`).
+
+## 17. Ready-Made Prompt for Starting a New Thread
 
 ```
-I'm continuing work on Photo Viewer, a self-hosted multi-user photo annotation app.
+I'm continuing work on Photo Viewer v1.0.0, a self-hosted family photo annotation web app
+distributed as a Docker image.
 
-Read the handoff document at HANDOFF.md first — it has the full current state, architecture, recent fixes, and known issues.
+Read HANDOFF.md first — it has the full current state, container layout, release flow,
+and constraints.
 
 Key context:
 - Monorepo: packages/shared + server (Fastify/SQLite/Drizzle) + client (React 19/Vite/TanStack Query)
-- Build: `npm run build` then `npm start` (port 3000)
-- Photos path: /Users/paulmarshall/Pictures/01 New/New Images
-- Admin email: jabulanison@gmail.com
-- Stories are saved to .story.md sidecar files, metadata to .xmp sidecar files
-- Git repo active, 5 commits on main
-- Recent work: fixed DNG/NEF/PSB image previews, PSB auto-generation during indexing, image resize on window change, Viewer "i" button always blue, Settings layout fix, added Read Me documentation page on all pages
-- IMPORTANT: photos_fts is a contentless FTS5 table — use the special 'delete' command, not regular DELETE
-- IMPORTANT: DNG files bypass embedded extraction — use generatePreview() directly (findBestSource)
-- PSB previews use ImageMagick psd:file[0] — must have ImageMagick installed (brew install imagemagick)
-- No tests
+- Distributed as a Docker image: ghcr.io/paulmarshall-wfw/photo-viewer
+- Recipients run `docker compose up -d` against a deploy bundle (deploy/ in repo)
+- Photo library is bind-mounted read-only at /library
+- Metadata DB lives at /app/server/data/photo-viewer.db (host-mounted to ./data)
+- Numbered version tags only — never `latest` (per docker-build-and-publish skill v6.1)
+- Default to Build Mode; don't enter Release Mode without explicit intent
 
-[Describe what you want to do next]
+Locked constraints:
+- DB is source of truth for all metadata in v1; XMP writeback was dropped
+- photos_fts is contentless FTS5 — special 'delete' command, never regular DELETE
+- Notifications never fan out to the actor
+- One level of comment threading only
+- SQLite NULLS LAST — use CASE WHEN workaround
+- Library mount is read-only
+
+The app is feature-complete and the Docker layer is built and smoke-tested locally.
+v1.0.0 has not yet been published to GHCR.
+
+Tell me what you want to do — publish v1.0.0, onboard a family, fix a bug, or extend features.
 ```

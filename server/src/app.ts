@@ -13,6 +13,12 @@ import { imageRoutes } from './images/routes.js';
 import { metadataRoutes } from './metadata/routes.js';
 import { activityRoutes } from './activity/routes.js';
 import { searchRoutes } from './search/routes.js';
+import { reactionsRoutes } from './reactions/routes.js';
+import { commentsRoutes } from './comments/routes.js';
+import { tagsRoutes } from './tags/routes.js';
+import { followsRoutes } from './follows/routes.js';
+import { notificationsRoutes } from './notifications/routes.js';
+import { onThisDayRoutes } from './on-this-day/routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -37,6 +43,12 @@ export async function buildApp() {
   await app.register(metadataRoutes);
   await app.register(activityRoutes);
   await app.register(searchRoutes);
+  await app.register(reactionsRoutes);
+  await app.register(commentsRoutes);
+  await app.register(tagsRoutes);
+  await app.register(followsRoutes);
+  await app.register(notificationsRoutes);
+  await app.register(onThisDayRoutes);
 
   // Health check
   app.get('/api/health', async () => {
@@ -49,7 +61,6 @@ export async function buildApp() {
     await app.register(fastifyStatic, {
       root: clientDist,
       prefix: '/',
-      wildcard: false,
     });
 
     // SPA fallback — serve index.html for all non-API routes

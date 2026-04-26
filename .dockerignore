@@ -1,0 +1,41 @@
+**/node_modules
+**/dist
+**/.turbo
+**/.next
+**/.cache
+**/*.log
+**/.DS_Store
+
+# Local data (never bake into the image)
+server/data
+data
+.env
+.env.*
+!.env.example
+
+# VCS / editors / docs not needed in image
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.md
+!README.md
+!HANDOFF.md
+
+# Build outputs we'll regenerate
+client/dist
+server/dist
+packages/shared/dist
+client/tsconfig.tsbuildinfo
+server/tsconfig.tsbuildinfo
+packages/shared/tsconfig.tsbuildinfo
+
+# Tests / coverage
+coverage
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+
+# Deploy bundle (shipped separately, not into image)
+deploy

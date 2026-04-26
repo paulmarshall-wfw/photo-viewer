@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, FolderOpen, Image, Search, Activity, Settings, Keyboard, Star, FileImage } from 'lucide-react';
+import { ArrowLeft, BookOpen, FolderOpen, Image, Search, Activity, Settings, Keyboard, Star, FileImage, Heart, Bell, Calendar, Users } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
 
@@ -114,7 +114,7 @@ export function ReadmePage() {
         <ul style={{ marginLeft: 16, marginTop: 8 }}>
           <li style={{ marginBottom: 4 }}>Click any photo to open it in the <strong style={{ color: 'var(--text-primary)' }}>Viewer</strong>.</li>
           <li style={{ marginBottom: 4 }}>Each card shows the filename. If a title has been set, it appears below the filename.</li>
-          <li>Sort the gallery by Name, Date, or <em>Needs Annotation</em> (photos missing a title or caption appear first).</li>
+          <li>Sort the gallery by Name, Date, <em>Timeline</em> (chronological with year/decade markers, undated at end), or <em>Needs Annotation</em>.</li>
         </ul>
       </Section>
 
@@ -154,6 +154,43 @@ export function ReadmePage() {
           Stories are longer narrative entries attached to a photo. Each entry has an author and a date stamp.
           Stories are saved to <code style={{ fontSize: 12 }}>.story.md</code> sidecar files. Multiple stories can be added per photo.
           Press <kbd style={{ padding: '1px 6px', background: 'var(--bg-tertiary)', borderRadius: 4, fontSize: 12, fontFamily: 'monospace' }}>⌘ Enter</kbd> to save a story while typing.
+        </p>
+      </Section>
+
+      {/* Reactions & Comments */}
+      <Section icon={<Heart size={20} />} title="Reactions & Comments">
+        <p style={{ marginBottom: 8 }}>
+          React to any photo with ❤️ 😂 😢 😮 🙏 👏. Reactions are attributed — hover a count to see who reacted.
+        </p>
+        <p>
+          Comments are threaded one level deep. Tap <strong style={{ color: 'var(--text-primary)' }}>Reply</strong> under any top-level comment to respond. You can delete your own comments; admins can delete any.
+        </p>
+      </Section>
+
+      {/* Following & Notifications */}
+      <Section icon={<Bell size={20} />} title="Following & Notifications">
+        <p style={{ marginBottom: 8 }}>
+          Click the bell icon in the Info panel to <strong style={{ color: 'var(--text-primary)' }}>follow</strong> a photo. You'll be notified when others react, comment, tag, or edit its metadata. Adding any content auto-follows.
+        </p>
+        <p>
+          The <strong style={{ color: 'var(--text-primary)' }}>bell</strong> in the top nav shows unread count. Click a notification to jump to the photo. Polls every 30 seconds.
+        </p>
+      </Section>
+
+      {/* On This Day */}
+      <Section icon={<Calendar size={20} />} title="On This Day">
+        <p>
+          The Library page shows a banner of photos from today's date in previous years. Click × to dismiss for the rest of the day. Uses your user-set date; falls back to EXIF.
+        </p>
+      </Section>
+
+      {/* People & Places */}
+      <Section icon={<Users size={20} />} title="People & Places">
+        <p style={{ marginBottom: 8 }}>
+          Tag people in a photo from the Info panel — start typing a name and pick from suggestions, or create a new tag inline. No limit per photo.
+        </p>
+        <p>
+          Add a free-text <strong style={{ color: 'var(--text-primary)' }}>Location</strong> to any photo. Stored in the database (not XMP).
         </p>
       </Section>
 

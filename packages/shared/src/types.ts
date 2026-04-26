@@ -34,7 +34,10 @@ export interface Photo {
   hasStory: boolean;
   hasThumbnail: boolean;
   hasPreview: boolean;
+  location: string | null;
   indexedAt: string;
+  reactionCount?: number;
+  commentCount?: number;
 }
 
 export interface StoryEntry {
@@ -64,11 +67,72 @@ export type ActivityAction =
   | 'set_date'
   | 'add_story'
   | 'edit_story'
-  | 'delete_story';
+  | 'delete_story'
+  | 'add_reaction'
+  | 'remove_reaction'
+  | 'add_comment'
+  | 'delete_comment'
+  | 'add_people_tag'
+  | 'remove_people_tag'
+  | 'set_location';
 
-export type SortField = 'date' | 'filename' | 'annotation';
+export type SortField = 'date' | 'filename' | 'annotation' | 'timeline';
 export type SortOrder = 'asc' | 'desc';
 export type Theme = 'light' | 'dark';
+
+export interface PeopleTag {
+  id: string;
+  name: string;
+}
+
+export interface Reaction {
+  id: string;
+  photoId: string;
+  userId: string;
+  userDisplayName: string;
+  emoji: string;
+  createdAt: string;
+}
+
+export interface Comment {
+  id: string;
+  photoId: string;
+  userId: string;
+  userDisplayName: string;
+  parentCommentId: string | null;
+  body: string;
+  createdAt: string;
+  replies: Comment[];
+}
+
+export type NotificationActionType =
+  | 'reaction'
+  | 'comment'
+  | 'reply'
+  | 'people_tag'
+  | 'set_title'
+  | 'set_caption'
+  | 'add_story'
+  | 'edit_story'
+  | 'set_location';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  photoId: string;
+  photoFilename: string;
+  photoFolderPath: string;
+  actorId: string;
+  actorDisplayName: string;
+  actionType: NotificationActionType;
+  detail: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface OnThisDayPhoto extends Photo {
+  year: number;
+}
 
 export interface AnnotationProgress {
   totalPhotos: number;
