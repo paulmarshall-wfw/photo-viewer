@@ -96,7 +96,17 @@
       "Bash(mkdir -p /tmp/pv-test-data)",
       "Bash(grep -E '^\\(typescript|vite|drizzle-kit|@vitejs|tsx\\)$')",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git tag *)",
+      "Bash(git push *)",
+      "Bash(docker pull *)",
+      "Bash(docker buildx *)",
+      "Bash(curl -fsS https://api.github.com/repos/paulmarshall-wfw/photo-viewer/releases/tags/v1.0.0)",
+      "Bash(python3 -c \"import json,sys; r=json.load\\(sys.stdin\\); print\\('Release:', r['name'] or r['tag_name']\\); print\\('Assets:'\\); [print\\(f'  {a[\\\\\"name\\\\\"]} \\({a[\\\\\"size\\\\\"]} bytes\\)'\\) for a in r['assets']]\")",
+      "Bash(node '~/.claude/skills/applauncher-manifest/scripts/validate_manifest.mjs' --manifest '__TRACKED_VAR__/Library/Application Support/AppLauncher/manifest-install/photo-viewer/manifest.json')",
+      "Bash(node -e 'const fs=require\\('\\\\''fs'\\\\''\\); const j=JSON.parse\\(fs.readFileSync\\('\\\\''__TRACKED_VAR__'\\\\''\\)\\); j.version='\\\\''1.0.1'\\\\''; fs.writeFileSync\\('\\\\''__TRACKED_VAR__'\\\\'', JSON.stringify\\(j, null, 2\\)+'\\\\''\\\\n'\\\\''\\)')",
+      "Bash(echo \"1.0.1\")",
+      "Bash(curl -fsS -X POST http://localhost:13000/api/setup -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"displayName\":\"Tester\"}' -i)"
     ]
   }
 }

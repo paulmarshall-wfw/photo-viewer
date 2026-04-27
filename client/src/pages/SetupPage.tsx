@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSetup } from '../hooks/useAuth.js';
+import { useSetup, useSetupStatus } from '../hooks/useAuth.js';
 import { FolderPicker } from '../components/shared/FolderPicker.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
@@ -9,11 +9,23 @@ export function SetupPage() {
   const [displayName, setDisplayName] = useState('');
   const [photosPath, setPhotosPath] = useState('');
   const setup = useSetup();
+  const status = useSetupStatus();
   const { theme, toggleTheme } = useTheme();
+
+  // When the server is launched with SETUP_LIBRARY_PATH set (typically by
+  // AppLauncher with a host bind-mount), the host folder has already been
+  // chosen — we hide the in-app picker and let the server use its env value.
+  const presetLibraryPath = status.data?.setupLibraryPath ?? null;
+  const pickerHidden = !!presetLibraryPath;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setup.mutate({ email, displayName, photosPath });
+    setup.mutate({
+      email,
+      displayName,
+      // Omit photosPath when the server has a preset; server will fill it in.
+      ...(pickerHidden ? {} : { photosPath }),
+    });
   };
 
   return (
@@ -50,13 +62,22 @@ export function SetupPage() {
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Photos Location</label>
-            <FolderPicker value={photosPath} onChange={setPhotosPath} />
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
-              Browse to or type the full path to your photos folder
-            </p>
-          </div>
+          {pickerHidden ? (
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Photo Library</label>
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: 0 }}>
+                Your photo folder was chosen when this app was launched and is mounted automatically. No further action needed.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Photos Location</label>
+              <FolderPicker value={photosPath} onChange={setPhotosPath} />
+              <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
+                Browse to or type the full path to your photos folder
+              </p>
+            </div>
+          )}
 
           {setup.error && (
             <p style={{ color: 'var(--danger)', fontSize: 14 }}>

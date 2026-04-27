@@ -8,6 +8,9 @@ export const config = {
   host: process.env.HOST || '0.0.0.0',
   dataDir: process.env.DATA_DIR || path.resolve(__dirname, '../data'),
   sessionSecret: process.env.SESSION_SECRET || 'photo-viewer-default-secret-change-me-in-production!!',
+  // When set (typically by a launcher that already bind-mounts the host
+  // photo folder), Setup hides the folder picker and uses this path.
+  setupLibraryPath: process.env.SETUP_LIBRARY_PATH || null,
   get dbPath() {
     return path.join(this.dataDir, 'photo-viewer.db');
   },

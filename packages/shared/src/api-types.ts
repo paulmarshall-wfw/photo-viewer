@@ -16,13 +16,18 @@ import type {
 
 // Setup
 export interface SetupRequest {
-  photosPath: string;
+  // Optional when the server has a SETUP_LIBRARY_PATH env var set
+  // (launcher-managed deployments where the host folder is bind-mounted).
+  photosPath?: string;
   displayName: string;
   email: string;
 }
 
 export interface SetupStatusResponse {
   needsSetup: boolean;
+  // When set, the server has been launched with a pre-bound library path
+  // (e.g. AppLauncher bind-mount). The client should hide the folder picker.
+  setupLibraryPath?: string | null;
 }
 
 // Auth

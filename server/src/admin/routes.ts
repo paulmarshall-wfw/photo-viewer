@@ -3,29 +3,37 @@ import path from 'node:path';
 import os from 'node:os';
 import type { FastifyInstance } from 'fastify';
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_DAYS } from '@photo-viewer/shared';
+import { config } from '../config.js';
 import { createAdminUser, createInvite, regenerateInvite, revokeUser, getAllUsers } from '../auth/service.js';
 import { isSetupComplete, setConfig, getPhotosPath, setPhotosPath } from './service.js';
 
 const COOKIE_MAX_AGE = SESSION_MAX_AGE_DAYS * 24 * 60 * 60;
 
 export async function adminRoutes(app: FastifyInstance) {
-  // Setup status (public)
+  // Setup status (public). Exposes setupLibraryPath when the server was
+  // launched with SETUP_LIBRARY_PATH set so the client can hide the picker.
   app.get('/api/setup/status', async () => {
-    return { needsSetup: !isSetupComplete() };
+    return {
+      needsSetup: !isSetupComplete(),
+      setupLibraryPath: config.setupLibraryPath,
+    };
   });
 
-  // Initial setup (public, one-time)
-  app.post<{ Body: { photosPath: string; displayName: string; email: string } }>('/api/setup', async (request, reply) => {
+  // Initial setup (public, one-time).
+  // photosPath is optional when SETUP_LIBRARY_PATH is set on the server.
+  app.post<{ Body: { photosPath?: string; displayName: string; email: string } }>('/api/setup', async (request, reply) => {
     if (isSetupComplete()) {
       return reply.code(400).send({ error: 'Setup already completed' });
     }
 
-    const { photosPath, displayName, email } = request.body;
+    const { displayName, email } = request.body;
+    const photosPath = request.body.photosPath || config.setupLibraryPath || '';
+
     if (!photosPath || !displayName || !email) {
       return reply.code(400).send({ error: 'All fields are required' });
     }
 
-    // Validate photos path exists
+    // Validate photos path exists (inside the container if launcher-managed).
     if (!fs.existsSync(photosPath)) {
       return reply.code(400).send({ error: 'Photos path does not exist' });
     }
