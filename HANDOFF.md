@@ -5,12 +5,12 @@
 | Field | Value |
 |-------|-------|
 | Project | Photo Viewer |
-| Version | 1.0.1 (published) |
+| Version | 1.0.2 (published) |
 | Updated | 2026-04-26 |
 | Handoff type | Implementation handoff |
 | Status | v1.0.0 published to GHCR; recipient install flow not yet exercised on a clean host |
 | Repo | https://github.com/paulmarshall-wfw/photo-viewer |
-| Image | `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.1` (multi-arch: amd64 + arm64) |
+| Image | `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.2` (multi-arch: amd64 + arm64) |
 | Release | https://github.com/paulmarshall-wfw/photo-viewer/releases/tag/v1.0.0 |
 | Branch | main |
 | Session scope | Docker packaging, GitHub repo setup, v1.0.0 release |
@@ -30,7 +30,7 @@ The five family storytelling features (Reactions & Comments, Photo Following + N
 **Definition of done:**
 - Fresh extraction of the published `photo-viewer-deploy.zip` boots a working Photo Viewer.
 - Library, Gallery, Viewer, comments, reactions all work in that fresh install.
-- Any rough edges in the recipient flow are documented and fixed for v1.0.1.
+- Any rough edges in the recipient flow are documented and fixed for v1.0.2.
 
 After that: onboard the first real family (Marshall household).
 
@@ -49,7 +49,7 @@ After that: onboard the first real family (Marshall household).
 - Image previews: JPEG, PNG, TIFF, RAW, DNG, PSD, PSB
 - Read Me documentation page
 - Containerised: builds clean, runs as non-root, listens on `:3000`, persists `./data` and reads `/library` read-only
-- **Published**: `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.1` (and `:1.0`, `:1`, `:1.0.0-g<sha>`) for `linux/amd64` and `linux/arm64`
+- **Published**: `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.2` (and `:1.0`, `:1`, `:1.0.0-g<sha>`) for `linux/amd64` and `linux/arm64`
 
 ### Not in v1
 - HTTPS on the LAN — README documents `mkcert` recipe; no built-in TLS
@@ -87,7 +87,7 @@ npm run dev                 # watch mode (concurrent server + vite)
 ### Dev (Docker, builds locally)
 
 ```bash
-docker compose up -d        # uses repo-root docker-compose.yml; builds photo-viewer:1.0.1
+docker compose up -d        # uses repo-root docker-compose.yml; builds photo-viewer:1.0.2
 docker compose logs -f
 ```
 
@@ -104,14 +104,14 @@ The script prompts for library path + port, generates `SESSION_SECRET`, runs `do
 
 ### Cutting a new release
 
-Stay in **Build Mode** by default (per the `docker-build-and-publish` skill v6.1). Release Mode requires explicit user intent. To cut v1.0.1+:
+Stay in **Build Mode** by default (per the `docker-build-and-publish` skill v6.1). Release Mode requires explicit user intent. To cut v1.0.2+:
 
 ```bash
-git tag -a v1.0.1 -m "Release v1.0.1"
-git push origin v1.0.1
+git tag -a v1.0.2 -m "Release v1.0.2"
+git push origin v1.0.2
 ```
 
-The `.github/workflows/release.yml` workflow builds multi-arch (`linux/amd64,linux/arm64`), pushes numbered tags `1.0.1 / 1.0 / 1 / 1.0.1-g<sha>` to `ghcr.io/paulmarshall-wfw/photo-viewer`, and attaches `photo-viewer-deploy.zip` to the release. **Workflow permissions must be set to "Read and write"** in repo Settings → Actions → General — already done.
+The `.github/workflows/release.yml` workflow builds multi-arch (`linux/amd64,linux/arm64`), pushes numbered tags `1.0.2 / 1.0 / 1 / 1.0.2-g<sha>` to `ghcr.io/paulmarshall-wfw/photo-viewer`, and attaches `photo-viewer-deploy.zip` to the release. **Workflow permissions must be set to "Read and write"** in repo Settings → Actions → General — already done.
 
 ## 7. Tech Stack
 
@@ -285,7 +285,7 @@ This session and the immediately preceding ones:
 
 ## 15. Risks and Cautions
 
-- **First fresh-host install will probably surface rough edges** in `install.sh` or the README. Fix them as v1.0.1.
+- **First fresh-host install will probably surface rough edges** in `install.sh` or the README. Fix them as v1.0.2.
 - **Migration corruption on existing DBs.** New migrations are additive (`CREATE TABLE IF NOT EXISTS`), but always test against a copy.
 - **Recipient confusion on NAS.** Synology/QNAP UIs differ across firmware versions. Be ready to iterate the README after first real NAS install.
 - **Release Mode requires explicit user intent.** Per the skill, don't auto-release on a request like "publish this" without confirming the version bump and changelog implications.
@@ -294,7 +294,7 @@ This session and the immediately preceding ones:
 
 ### Now
 1. Run `bash scripts/install.sh` from a fresh extraction of the published `photo-viewer-deploy.zip` on this Mac. Time it. Note any gaps.
-2. Fix gaps as v1.0.1 (re-tag, workflow republishes).
+2. Fix gaps as v1.0.2 (re-tag, workflow republishes).
 
 ### Soon
 3. Onboard the first real family (Marshall household) using the published bundle.
@@ -323,7 +323,7 @@ and constraints.
 
 Key context:
 - Repo:    https://github.com/paulmarshall-wfw/photo-viewer
-- Image:   ghcr.io/paulmarshall-wfw/photo-viewer:1.0.1 (multi-arch amd64+arm64)
+- Image:   ghcr.io/paulmarshall-wfw/photo-viewer:1.0.2 (multi-arch amd64+arm64)
 - Release: https://github.com/paulmarshall-wfw/photo-viewer/releases/tag/v1.0.0
 
 Tech: monorepo (packages/shared + server Fastify/SQLite/Drizzle + client React 19/Vite/TanStack Query).
@@ -344,5 +344,5 @@ The recipient install flow has NOT yet been exercised on a clean host. That's th
 next verification step.
 
 Tell me what you want to do — verify the install, onboard a family, fix a bug,
-cut v1.0.1, or extend features.
+cut v1.0.2, or extend features.
 ```

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client.js';
-import { useCurrentUser } from '../hooks/useAuth.js';
+import { useCurrentUser, useSetupStatus } from '../hooks/useAuth.js';
 import { UserPlus, Trash2, RefreshCw, Copy, Settings, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPicker } from '../components/shared/FolderPicker.js';
@@ -12,7 +12,12 @@ export function AdminPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const user = useCurrentUser();
+  const setupStatus = useSetupStatus();
   const queryClient = useQueryClient();
+  // Launcher-managed installs (e.g. AppLauncher with a host bind-mount) lock
+  // the photo folder upstream — the picker can't see anything except /library.
+  const launcherManaged = !!setupStatus.data?.setupLibraryPath;
+  const launcherLibraryPath = setupStatus.data?.setupLibraryPath ?? '';
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
@@ -198,23 +203,39 @@ export function AdminPage() {
         <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}>
           <Settings size={18} /> Storage Location
         </h2>
-        <form
-          onSubmit={(e) => { e.preventDefault(); updateConfigMutation.mutate({ photosPath }); }}
-        >
-          <div style={{ marginBottom: 12 }}>
-            <FolderPicker value={photosPath} onChange={setPhotosPath} />
+        {launcherManaged ? (
+          <div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 8 }}>
+              This install is launcher-managed. The photo folder is bind-mounted from your host and is read-only inside the app:
+            </p>
+            <code style={{ display: 'inline-block', padding: '6px 10px', background: 'var(--bg-tertiary)', borderRadius: 6, fontSize: 13 }}>
+              {launcherLibraryPath}
+            </code>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 12 }}>
+              To point at a different folder, change the bind mount in your launcher (e.g. AppLauncher) and restart the app.
+            </p>
           </div>
-          <button className="btn btn-primary" type="submit" disabled={updateConfigMutation.isPending}>
-            Update
-          </button>
-        </form>
-        {updateConfigMutation.isSuccess && (
-          <p style={{ color: 'var(--success)', fontSize: 14, marginTop: 8 }}>Storage location updated.</p>
-        )}
-        {updateConfigMutation.error && (
-          <p style={{ color: 'var(--danger)', fontSize: 14, marginTop: 8 }}>
-            {updateConfigMutation.error instanceof Error ? updateConfigMutation.error.message : 'Failed to update'}
-          </p>
+        ) : (
+          <>
+            <form
+              onSubmit={(e) => { e.preventDefault(); updateConfigMutation.mutate({ photosPath }); }}
+            >
+              <div style={{ marginBottom: 12 }}>
+                <FolderPicker value={photosPath} onChange={setPhotosPath} />
+              </div>
+              <button className="btn btn-primary" type="submit" disabled={updateConfigMutation.isPending}>
+                Update
+              </button>
+            </form>
+            {updateConfigMutation.isSuccess && (
+              <p style={{ color: 'var(--success)', fontSize: 14, marginTop: 8 }}>Storage location updated.</p>
+            )}
+            {updateConfigMutation.error && (
+              <p style={{ color: 'var(--danger)', fontSize: 14, marginTop: 8 }}>
+                {updateConfigMutation.error instanceof Error ? updateConfigMutation.error.message : 'Failed to update'}
+              </p>
+            )}
+          </>
         )}
       </section>
     </div>

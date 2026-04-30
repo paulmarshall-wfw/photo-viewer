@@ -209,10 +209,18 @@ export async function adminRoutes(app: FastifyInstance) {
     return { photosPath: getPhotosPath() };
   });
 
-  // Admin: update storage path
+  // Admin: update storage path. Locked when SETUP_LIBRARY_PATH is set —
+  // the launcher controls the bind mount and the container can only see
+  // that one folder.
   app.put<{ Body: { photosPath: string } }>('/api/admin/config', async (request, reply) => {
     if (request.user?.role !== 'admin') {
       return reply.code(403).send({ error: 'Admin access required' });
+    }
+
+    if (config.setupLibraryPath) {
+      return reply.code(409).send({
+        error: 'Storage location is managed by the launcher and cannot be changed in-app.',
+      });
     }
 
     const { photosPath } = request.body;

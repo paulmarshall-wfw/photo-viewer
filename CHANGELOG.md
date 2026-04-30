@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.2 — 2026-04-28
+
+- Lock Settings → Storage Location when the server is launched with
+  `SETUP_LIBRARY_PATH` set. The folder picker is replaced with a
+  read-only display of the bind-mount path. The `PUT /api/admin/config`
+  endpoint refuses changes in launcher-managed mode (HTTP 409).
+- Closes the v1.0.1 gap where Settings still showed an unusable picker
+  (the container can only see the launcher's bind mount).
+
 ## v1.0.1 — 2026-04-26
 
 - Hide the in-app folder picker on Setup when the server is launched with

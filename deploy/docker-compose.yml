@@ -3,7 +3,7 @@
 #   docker compose pull && docker compose up -d
 services:
   photo-viewer:
-    image: ghcr.io/paulmarshall-wfw/photo-viewer:${IMAGE_TAG:-1.0.1}
+    image: ghcr.io/paulmarshall-wfw/photo-viewer:${IMAGE_TAG:-1.0.2}
     container_name: photo-viewer
     restart: unless-stopped
     ports:
