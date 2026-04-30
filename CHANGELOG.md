@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.3 — 2026-04-28
+
+- When the photos path changes (Settings → Storage Location → Update,
+  in non-launcher installs), wipe all data derived from the previous
+  library so the gallery returns to a blank "Run Indexer" state. Wipes
+  photos, folders, photos_fts, reactions, comments, photo-tag links,
+  photo follows, notifications, on-this-day dismissals, and the
+  on-disk previews + thumbnails caches. Preserves users, people-tag
+  definitions, and activity history.
+- Closes the v1.0.2 edge case where stale photo rows pointing at the
+  old folder remained visible until a manual re-index.
+
 ## v1.0.2 — 2026-04-28
 
 - Lock Settings → Storage Location when the server is launched with
