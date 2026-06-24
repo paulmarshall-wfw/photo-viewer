@@ -1,348 +1,212 @@
-# Photo Viewer — Project Handoff
+# Handoff
 
 ## 1. Metadata
 
 | Field | Value |
-|-------|-------|
+| --- | --- |
 | Project | Photo Viewer |
-| Version | 1.0.3 (published) |
-| Updated | 2026-04-26 |
-| Handoff type | Implementation handoff |
-| Status | v1.0.0 published to GHCR; recipient install flow not yet exercised on a clean host |
-| Repo | https://github.com/paulmarshall-wfw/photo-viewer |
-| Image | `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.3` (multi-arch: amd64 + arm64) |
-| Release | https://github.com/paulmarshall-wfw/photo-viewer/releases/tag/v1.0.0 |
-| Branch | main |
-| Session scope | Docker packaging, GitHub repo setup, v1.0.0 release |
+| Handoff type | baseline / maintenance handoff |
+| Created UTC | 2026-05-13T06:14:31Z |
+| Prepared by | Codex |
+| Repository | `/Users/paulmarshall/Software Development/Photo Viewer` |
+| Branch / context | `main` tracking `origin/main` |
+| Session scope | Folder review, Git repo confirmation, Docker-app baseline handoff |
+
+### Checkpoint Status
+
+- Git repository: confirmed at `/Users/paulmarshall/Software Development/Photo Viewer`
+- Git HEAD: `9b425ce`
+- Working tree: dirty
+- Dirty files intentionally in scope:
+  - `HANDOFF.md`
+- Dirty files intentionally out of scope:
+  - None
+- Untracked files intentionally in scope:
+  - project-dossier.md
+- Untracked files intentionally out of scope:
+  - AGENTS.md
+- Canonical files described:
+  - `package.json`
+  - `VERSION`
+  - `Dockerfile`
+  - `docker-compose.yml`
+  - `deploy/docker-compose.yml`
+  - `deploy/.env.example`
+  - `deploy/README-INSTALL.md`
+  - `.github/workflows/release.yml`
+  - `CHANGELOG.md`
+  - `project-dossier.md`
+- Last verification:
+  - command: `npm run build`
+  - result: passed
+  - timestamp UTC: `2026-05-13T06:14:31Z`
+- Handoff freshness: `fresh-to-dirty-tree`
+- Safe-to-continue basis: this file is grounded in the current folder contents, current Git state, and a passing root production build.
+- Next checkpoint action: decide whether `AGENTS.md` should be tracked, then commit the handoff baseline if desired.
+
+Note: `AGENTS.md` was present before this handoff rewrite and is intentionally not changed here.
 
 ## 2. Executive Summary
 
-Photo Viewer is a **self-hosted, single-tenant family photo annotation web app**, distributed as a **Docker image**. One trusted person per family runs the container on a Mac, PC, Linux box, or NAS; everyone else opens it in a browser on the same LAN. Photo originals stay on the host (read-only bind mount); comments, reactions, captions, tags, and the user database live in a SQLite file in `./data` next to the compose file.
+Photo Viewer is a self-hosted, single-tenant family photo annotation web app distributed as a Docker app. The runtime model is a Node/Fastify API plus a built React/Vite client served from the same container on port `3000`.
 
-**v1.0.0 is published.** The multi-arch image is on GHCR and the recipient deploy bundle is attached to the GitHub Release. Image pull works; manifest lists both `linux/amd64` and `linux/arm64`. The end-to-end recipient install (download zip → run `install.sh` → reach Library) has not yet been exercised on a fresh host — that's the next verification step.
+The repo is already a Git repository and is connected to `origin` at `git@github.com:paulmarshall-wfw/photo-viewer.git`. Current version sources agree on `1.0.3` (`VERSION`, root `package.json`, workspace package manifests, deploy defaults, and changelog).
 
-The five family storytelling features (Reactions & Comments, Photo Following + Notifications, On This Day, People & Places Tagging, Timeline View) shipped earlier in the month and are working.
+The current baseline is safe to continue from for normal development and Docker build-mode work. This session did not perform a Docker build, publish, version bump, changelog update, tag, or release.
+
+Broader project context is in `project-dossier.md`; do not load it unless needed for architecture, history, feature inventory, or roadmap context.
 
 ## 3. Current Objective
 
-**Immediate goal:** Run the recipient install flow on a clean host (this Mac is fine) end-to-end against the published `photo-viewer-deploy.zip`. Confirm: download → extract → install.sh → admin bootstrap → log in → index a small library → view a photo → leave a comment, all under 10 minutes.
+Immediate goal: preserve a concise repo baseline so future work can start from the actual folder state instead of stale chat context.
 
-**Definition of done:**
-- Fresh extraction of the published `photo-viewer-deploy.zip` boots a working Photo Viewer.
-- Library, Gallery, Viewer, comments, reactions all work in that fresh install.
-- Any rough edges in the recipient flow are documented and fixed for v1.0.3.
+Definition of done for this baseline:
 
-After that: onboard the first real family (Marshall household).
+- Confirm the folder is a Git repo.
+- Record the app shape, Docker distribution path, version source, and key commands.
+- Record current verification and dirty-tree state.
+- Keep release behavior out of scope unless explicitly requested later.
 
 ## 4. Current State
 
 ### Working
-- Full photo browsing: Library → Gallery → Viewer
-- Title, caption, date editing (DB-only — XMP writeback was dropped)
-- Comments (one level of threading), Reactions (emoji, attributed), People & Places tagging, Photo Following + in-app Notifications, On This Day banner, Timeline sort with year/decade markers
-- Full-text search (contentless FTS5)
-- Activity feed
-- Slideshow with configurable intervals + loop
-- Virtual scrolling in Gallery
-- Theme toggle (light/dark)
-- Auth: cookie-based, invite-only, email-only login (case-insensitive)
-- Image previews: JPEG, PNG, TIFF, RAW, DNG, PSD, PSB
-- Read Me documentation page
-- Containerised: builds clean, runs as non-root, listens on `:3000`, persists `./data` and reads `/library` read-only
-- **Published**: `ghcr.io/paulmarshall-wfw/photo-viewer:1.0.3` (and `:1.0`, `:1`, `:1.0.0-g<sha>`) for `linux/amd64` and `linux/arm64`
 
-### Not in v1
-- HTTPS on the LAN — README documents `mkcert` recipe; no built-in TLS
-- Map view for `location` (free text only)
-- Audio narration (postponed)
-- XMP writeback (dropped during social-features work — metadata lives in DB)
-- Multi-tenant cloud deployment (a separate plan, `~/.claude/plans/enumerated-sleeping-simon.md`, exists if we ever go that direction; not in scope for v1)
+- Git repo exists at the workspace root; branch is `main`, tracking `origin/main`.
+- Root `npm run build` passes.
+- Monorepo shape is established with npm workspaces:
+  - `packages/shared`
+  - `server`
+  - `client`
+- Server stack: Node 20 target, Fastify 5, SQLite via `better-sqlite3`, Drizzle schema/migrations, cookie auth.
+- Client stack: React 19, Vite 6, TypeScript, TanStack Query, react-router, lucide icons.
+- Docker app packaging is present:
+  - `Dockerfile` builds the workspaces and runs a non-root Node Alpine runtime with ImageMagick, vips, and tini.
+  - Root `docker-compose.yml` builds a local image for dev/test use.
+  - `deploy/docker-compose.yml` pulls the published GHCR image for recipient installs.
+  - `deploy/scripts/install.*` and `deploy/scripts/upgrade.*` support recipient setup and upgrades.
+- Release workflow exists at `.github/workflows/release.yml` and is tag-triggered for `v*.*.*`; it builds and pushes `linux/amd64` and `linux/arm64` numbered GHCR tags and attaches `photo-viewer-deploy.zip`.
 
-## 5. Locked Business Rules
+### Partially Working
 
-- **DB is source of truth** for all metadata in v1. XMP writeback was dropped — `exiftool-vendored` stays for *reading* EXIF during indexing only.
-- **Photo cards show filename**, never the title.
-- **No-Line Rule**: no visible borders; depth via tonal layering and ambient shadows only.
-- **Pill-shaped primary buttons**: `border-radius: 9999px` with gradient backgrounds.
-- **Page names are fixed**: Library, Gallery, Viewer, Search, Activity, Settings, Login, Setup, Read Me.
-- **Contentless FTS5** — `photos_fts` cannot use regular DELETE. Must use the special `'delete'` command (see `updateFtsField` in `server/src/metadata/routes.ts`). Social features do not touch FTS5.
-- **Notifications** never fan out to the actor.
-- **Reactions** are attributed.
-- **One level of comment threading** — replies cannot have their own replies.
-- **"On This Day" date source**: user-assigned `dateTaken` first, EXIF fallback. Per-user dismissal in `dismissed_on_this_day`, keyed by calendar date.
-- **Library mount is read-only.** The container never writes back to the photo files.
-- **Never use `:latest`.** Numbered tags only — enforced by the `docker-build-and-publish` skill.
+- Recipient/NAS install docs and scripts exist, but this session did not re-run a fresh-host install.
+- Docker image publication is documented and wired through GitHub Actions, but this session did not verify the live GHCR image or release asset.
 
-## 6. Run Commands
+### Not Working Yet
 
-### Dev (host node, no Docker)
+- No current failing area was identified during the folder review.
+
+### Not Yet Verified
+
+- `docker build .`
+- `docker compose up`
+- `/api/health` from a running container
+- Fresh recipient install from `photo-viewer-deploy.zip`
+- NAS-specific Synology/QNAP flows
+
+## 5. Active Constraints
+
+- This is a Docker app; keep container behavior central when changing runtime, install, release, or distribution paths.
+- Default to Docker Build Mode unless the user explicitly asks for release behavior.
+- Never use `latest`; use numbered image tags only.
+- Do not bump versions, edit `CHANGELOG.md`, create Git tags, or publish images unless the user explicitly asks for release/distribution work.
+- Publishable distribution images must support both `linux/amd64` and `linux/arm64`.
+- Current version is `1.0.3`.
+- The app stores runtime DB/cache data under `/app/server/data` in the container and expects a read-only photo library mount at `/library`.
+- `DATA_DIR=/app/server/data` matters because `server/src/app.ts` resolves the production client bundle relative to `DATA_DIR`.
+- Photo originals must remain read-only; comments, reactions, tags, metadata, users, and cache data live in SQLite/data storage.
+- Keep secrets out of source: `.env` is ignored, `deploy/.env.example` is the checked-in template, and `SESSION_SECRET` is injected/generated.
+
+## 6. Commands and Verification
+
+Install dependencies:
 
 ```bash
 npm install
-npm run build
-npm start                   # production-style; serves API + client on :3000
-npm run dev                 # watch mode (concurrent server + vite)
 ```
 
-### Dev (Docker, builds locally)
+Run local dev server:
 
 ```bash
-docker compose up -d        # uses repo-root docker-compose.yml; builds photo-viewer:1.0.3
+npm run dev
+```
+
+Build all workspaces:
+
+```bash
+npm run build
+```
+
+Run production-style host Node server after build:
+
+```bash
+npm start
+```
+
+Build/run local Docker compose:
+
+```bash
+docker compose up -d
 docker compose logs -f
 ```
 
-### Recipient install (against published bundle)
+Recipient install flow from extracted deploy bundle:
 
 ```bash
-# Download & extract photo-viewer-deploy.zip from the GitHub Release page,
-# then from the extracted folder:
-bash scripts/install.sh                # macOS / Linux / NAS via SSH
-powershell -File scripts/install.ps1   # Windows
+bash scripts/install.sh
 ```
 
-The script prompts for library path + port, generates `SESSION_SECRET`, runs `docker compose pull && up -d`, then `docker compose exec photo-viewer node /app/scripts/create-admin.mjs` to bootstrap the first admin.
-
-### Cutting a new release
-
-Stay in **Build Mode** by default (per the `docker-build-and-publish` skill v6.1). Release Mode requires explicit user intent. To cut v1.0.3+:
+Latest verified command in this session:
 
 ```bash
-git tag -a v1.0.3 -m "Release v1.0.3"
-git push origin v1.0.3
+npm run build
 ```
 
-The `.github/workflows/release.yml` workflow builds multi-arch (`linux/amd64,linux/arm64`), pushes numbered tags `1.0.3 / 1.0 / 1 / 1.0.3-g<sha>` to `ghcr.io/paulmarshall-wfw/photo-viewer`, and attaches `photo-viewer-deploy.zip` to the release. **Workflow permissions must be set to "Read and write"** in repo Settings → Actions → General — already done.
+Result: passed. The build compiled shared, client, and server workspaces and produced the Vite production client bundle.
 
-## 7. Tech Stack
+## 7. Files to Open First
 
-| Layer | Technology |
-|-------|-----------|
-| Monorepo | npm workspaces (`packages/shared`, `server`, `client`) |
-| Server | Fastify v5 + Node 20 |
-| Database | SQLite via better-sqlite3 + Drizzle ORM |
-| Client | React 19 + Vite 6 + TypeScript + TanStack Query v5 |
-| Auth | HTTP-only cookies, invite-only, case-insensitive email login |
-| Metadata | DB-only |
-| EXIF reading | exiftool-vendored (read only) |
-| Images | sharp + ImageMagick (PSD/PSB) |
-| Container | Node 20 Alpine, ImageMagick + libvips, non-root `node` user, tini PID 1 |
-| Distribution | GHCR multi-arch (amd64 + arm64); GitHub Actions release workflow; numbered tags only |
-| Source hosting | GitHub: `paulmarshall-wfw/photo-viewer` (SSH remote) |
-| Icons | lucide-react |
-| Routing | react-router-dom v7 |
-| Virtual scrolling | @tanstack/react-virtual |
+- `AGENTS.md`: local repo instructions; currently untracked.
+- `package.json`: root workspaces and main scripts.
+- `VERSION`: primary visible version source.
+- `Dockerfile`: image build and runtime layout.
+- `docker-compose.yml`: local dev/test container wiring.
+- `deploy/docker-compose.yml`: recipient image, mounts, and env contract.
+- `deploy/.env.example`: install-time configuration defaults.
+- `deploy/README-INSTALL.md`: recipient and NAS setup guide.
+- `.github/workflows/release.yml`: release-only multi-arch GHCR workflow.
+- `server/src/config.ts`: runtime paths and environment variables.
+- `server/src/app.ts`: route registration, health check, and static client serving.
+- `client/src/App.tsx`: top-level client routing/auth shell.
+- `packages/shared/src/api-types.ts`: shared API contracts.
 
-## 8. Project Structure
+## 8. Next Actions
 
-```
-packages/shared/src/   types.ts, api-types.ts, constants.ts
+### Next
 
-server/src/
-  index.ts             entry point
-  app.ts               Fastify app + plugins + SPA fallback
-  config.ts            port, host, DATA_DIR, dbPath, cacheDir
-  auth/                cookie auth + email-only login (case-insensitive)
-  admin/               user management, /api/setup, browse-directories
-  photos/              indexer, folder contents, photo queries, stats
-  images/              thumbnail/preview pipeline (sharp + ImageMagick)
-  metadata/            EXIF read, title/caption/date/location/tags
-  activity/            activity feed
-  search/              FTS5 search
-  reactions/  comments/  tags/  follows/  notifications/  on-this-day/
-  db/                  Drizzle schema + SQL migrations + connection
-
-client/src/
-  App.tsx              router, auth flow, ToastProvider
-  api/client.ts        fetch-based API client
-  hooks/               useAuth, useFolders, usePhotos, useTheme,
-                       useReactions, useComments, usePeopleTags,
-                       usePhotoFollow, useNotifications, useOnThisDay
-  pages/               BrowsePage, ViewerPage, SearchPage, ActivityPage,
-                       AdminPage, SetupPage, ReadmePage, etc.
-  components/
-    layout/            Breadcrumbs
-    photos/            FolderCard, PhotoCard, ThumbnailGrid, ThumbnailStrip,
-                       ReactionBar, CommentThread, PeopleTagInput
-    viewer/            ImageDisplay, InfoPanel, InlineEdit,
-                       FullscreenWrapper, SlideshowControls
-    shared/            ErrorBoundary, FolderPicker, ProgressBar,
-                       ThemeToggle, NotificationBell, OnThisDayBanner, Toast
-  styles/              variables.css (tokens), global.css
-
-# Containerisation
-Dockerfile             multi-stage: Alpine builder + runtime, non-root, tini
-.dockerignore
-docker-compose.yml     dev/test (build: .)
-scripts/
-  create-admin.mjs     interactive/CLI admin bootstrap; runs inside container
-deploy/                shipped to recipients as photo-viewer-deploy.zip
-  docker-compose.yml   image: ghcr.io/paulmarshall-wfw/photo-viewer:${IMAGE_TAG:-1.0.0}
-  .env.example
-  scripts/install.sh   install.ps1  upgrade.sh  upgrade.ps1
-  README-INSTALL.md    end-user setup guide (Mac/Win/Linux/Synology/QNAP)
-.github/workflows/
-  release.yml          multi-arch GHCR push on v*.*.* tag, numbered tags only
-```
-
-## 9. Container Layout
-
-| Inside container | What |
-|------------------|------|
-| `/app/server/dist` | compiled server JS |
-| `/app/server/node_modules` | production deps (sharp, better-sqlite3, fastify) |
-| `/app/server/data` | **bind mount target** — SQLite DB + previews cache; persisted on host as `./data` |
-| `/app/client/dist` | built React SPA (served by fastify-static) |
-| `/app/scripts/create-admin.mjs` | first-run admin bootstrap |
-| `/library` | **bind mount target, read-only** — host path from `LIBRARY_PATH` env |
-| `node` (uid 1000) | non-root runtime user |
-| `tini` | PID 1 (signal handling) |
-
-`DATA_DIR=/app/server/data` is required because `app.ts` resolves `clientDist` as `path.resolve(DATA_DIR, '../../client/dist')`. Don't change `DATA_DIR` without updating that resolution or the static SPA stops serving.
-
-## 10. Recent Fixes Already Landed
-
-This session and the immediately preceding ones:
-
-1. **Email login case-insensitive** — `loginByEmail` now `.trim().toLowerCase()`s the input before matching.
-2. **fastify-static SPA fallback** — removed `wildcard: false` so `/assets/*.js` is served instead of being swallowed by the SPA `index.html` fallback.
-3. **InfoPanel redesign** — Stories removed; layout reordered to `filename → file metadata → reactions → spacer → metadata fields → comments`. Date+Time side-by-side.
-4. **BrowsePage header** — page title centred, breadcrumbs left, theme toggle next to settings on the right.
-5. **ViewerPage header** — "Viewer" centred at top, photo title + folder pill below the divider, NotificationBell + theme toggle + settings + username + Logout in the same positions as BrowsePage.
-6. **Docker packaging** — full `Dockerfile`, dev + recipient compose, install/upgrade scripts, GitHub Actions release workflow, README-INSTALL with NAS-specific walkthroughs.
-7. **DATA_DIR fix during smoke test** — moved from `/app/data` to `/app/server/data` so the relative SPA path resolves correctly.
-8. **GitHub repo created** at `paulmarshall-wfw/photo-viewer`; SSH key set up; Workflow Permissions set to Read+Write.
-9. **v1.0.0 published** — multi-arch image on GHCR, deploy bundle attached to release.
-
-## 11. Validation Status
-
-| Check | Status |
-|-------|--------|
-| `npm run build` | ✅ Passes |
-| `docker build .` | ✅ Passes (Apple Silicon, single-arch local) |
-| Container starts and `/api/health` responds | ✅ |
-| SPA `index.html` (700 bytes) served at `/` | ✅ |
-| `/api/setup/status` returns `{needsSetup: true}` on fresh DB | ✅ |
-| `create-admin.mjs --email --name --library` end-to-end | ✅ |
-| Migrations run on first start | ✅ |
-| Multi-arch build (amd64 + arm64) on GHA | ✅ Workflow succeeded |
-| GHCR image pulls and manifest contains both arches | ✅ Verified |
-| `photo-viewer-deploy.zip` attached to GitHub Release | ✅ 8.4 KB |
-| Recipient install on a clean host (download zip → install.sh → log in) | ❌ **Next verification step** |
-| NAS install (Synology / QNAP) | ❌ Not yet |
-
-## 12. Files Most Likely to Matter Next
-
-### If verifying / debugging recipient install
-| File | Why |
-|------|-----|
-| `deploy/scripts/install.sh` / `install.ps1` | Single-command bootstrap. First place rough edges show up. |
-| `deploy/README-INSTALL.md` | The doc the recipient reads. Update as you discover gaps. |
-| `scripts/create-admin.mjs` | First admin user bootstrap inside the container. |
-| `deploy/docker-compose.yml` | Hard-codes `ghcr.io/paulmarshall-wfw/photo-viewer`. |
-
-### If onboarding a real family
-| File | Why |
-|------|-----|
-| `deploy/README-INSTALL.md` | The doc the recipient reads. NAS-specific walkthroughs live here. |
-
-### If extending features
-| File | Why |
-|------|-----|
-| `server/src/db/schema.ts` | All Drizzle tables. |
-| `server/src/db/migrations/*.sql` | Manual SQL migrations applied at startup by `migrate.ts`. |
-| `server/src/notifications/service.ts` | Notification fan-out pattern (don't notify the actor). |
-| `client/src/components/viewer/InfoPanel.tsx` | The largest UI surface for per-photo affordances. |
-
-### If cutting a new release
-| File | Why |
-|------|-----|
-| `.github/workflows/release.yml` | The release pipeline. |
-| `deploy/.env.example` | The release workflow rewrites `IMAGE_TAG` here to pin the deploy bundle to the published version. |
-
-## 13. Constraints and Non-Negotiables
-
-- **Docker is the supported distribution channel.** No non-Docker installer story in v1.
-- **Never use `:latest`.** Per the `docker-build-and-publish` skill (v6.1). Numbered tags only: `1.0.0`, `1.0`, `1`, `1.0.0-g<sha>`.
-- **Stay in Build Mode by default.** Don't bump versions, edit `CHANGELOG.md`, or create git tags unless the user explicitly asks for a release.
-- **Library mount is read-only.** No code path may write into `/library`.
-- **Migration at startup** — new tables created via the SQL files in `server/src/db/migrations/`. Test on a copy first.
-- **Contentless FTS5** — `photos_fts` requires the special `'delete'` command. Social features must not touch this table.
-- **No notification fan-out to actor** — always exclude `actorId` from inserts.
-- **SQLite NULLS LAST** — use the `CASE WHEN date_taken IS NULL THEN 1 ELSE 0 END` workaround.
-- **Google Fonts CDN** — Space Grotesk + Plus Jakarta Sans loaded from `client/index.html`. Air-gapped installs see fallback fonts.
-- **No secrets in code** — `SESSION_SECRET` env var; install script generates one.
-- **GHCR image is public.** `docker pull` works without auth — keeps recipient flow simple. Re-evaluate if you ever ship something private.
-
-## 14. Known Open Issues
-
-1. **Image size 707 MB.** Acceptable for v1 but trim-able: vips ships in both builder and runtime, sharp prebuilds are large, exiftool ships its own perl runtime.
-2. **`@vitejs` dir lingers in `/app/node_modules`** after `npm prune --omit=dev`. Cosmetic — does not affect runtime.
-3. **No tests.** All validation is manual.
-4. **HTTPS not built in.** README points at `mkcert`; no Caddy sidecar shipped yet.
-5. **NAS UI walkthroughs in README are unverified** — written from documentation, not tested on real Synology/QNAP devices.
-6. **Recipient install flow not yet exercised on a fresh host.** First gap to close.
-7. **Story auto-save on unmount** — pre-existing edge case; left alone.
-
-## 15. Risks and Cautions
-
-- **First fresh-host install will probably surface rough edges** in `install.sh` or the README. Fix them as v1.0.3.
-- **Migration corruption on existing DBs.** New migrations are additive (`CREATE TABLE IF NOT EXISTS`), but always test against a copy.
-- **Recipient confusion on NAS.** Synology/QNAP UIs differ across firmware versions. Be ready to iterate the README after first real NAS install.
-- **Release Mode requires explicit user intent.** Per the skill, don't auto-release on a request like "publish this" without confirming the version bump and changelog implications.
-
-## 16. Next Actions
-
-### Now
-1. Run `bash scripts/install.sh` from a fresh extraction of the published `photo-viewer-deploy.zip` on this Mac. Time it. Note any gaps.
-2. Fix gaps as v1.0.3 (re-tag, workflow republishes).
-
-### Soon
-3. Onboard the first real family (Marshall household) using the published bundle.
-4. Verify NAS installs on at least one Synology and/or QNAP.
-5. Add a Caddy reverse-proxy compose snippet for HTTPS as v1.1.
+1. Decide whether to add and commit the untracked `AGENTS.md`.
+2. Commit this `HANDOFF.md` baseline and `project-dossier.md` if the repo should preserve them as the new starting point.
+3. If the next task touches Docker runtime behavior, run `docker build .` or `docker compose up -d` and verify `/api/health`.
 
 ### Blocked
-- Nothing.
 
-### Later (P1)
-- Map view for `location`.
-- Face region tagging.
-- Audio narration (separate spec).
-- People tag merge tool.
-- Weekly digest notifications.
-- Cloud multi-tenant deployment (see `~/.claude/plans/enumerated-sleeping-simon.md`).
+- Nothing is currently blocked.
 
-## 17. Ready-Made Prompt for Starting a New Thread
+### Later
 
-```
-I'm continuing work on Photo Viewer, a self-hosted family photo annotation web app
-distributed as a Docker image. v1.0.0 is published.
+- Add a single root `verify` script if this repo needs a standard maintenance command beyond `npm run build`.
+- Consider adding tests for critical server behavior before larger feature work.
+- Re-run a recipient install from the deploy bundle before any future release.
 
-Read HANDOFF.md first — it has current state, container layout, release flow,
-and constraints.
+## 9. Ready-Made Prompt for Starting a New Thread
 
-Key context:
-- Repo:    https://github.com/paulmarshall-wfw/photo-viewer
-- Image:   ghcr.io/paulmarshall-wfw/photo-viewer:1.0.3 (multi-arch amd64+arm64)
-- Release: https://github.com/paulmarshall-wfw/photo-viewer/releases/tag/v1.0.0
+```text
+Read HANDOFF.md first and treat it as the hot-context baseline for Photo Viewer.
 
-Tech: monorepo (packages/shared + server Fastify/SQLite/Drizzle + client React 19/Vite/TanStack Query).
-Distributed as a Docker image; recipients run `bash scripts/install.sh` from the deploy bundle.
-Photo library bind-mounted read-only at /library; metadata DB at /app/server/data/photo-viewer.db.
+This is a Docker-distributed family photo annotation web app in a Git repo at
+/Users/paulmarshall/Software Development/Photo Viewer. Start by checking the
+current Git status and opening the files listed in "Files to Open First".
 
-Locked constraints:
-- DB is source of truth for all metadata in v1; no XMP writeback
-- photos_fts is contentless FTS5 — special 'delete' command, never regular DELETE
-- Notifications never fan out to the actor
-- One level of comment threading only
-- SQLite NULLS LAST — use CASE WHEN workaround
-- Library mount is read-only
-- Numbered version tags only — never `latest`
-- Default to Build Mode; don't enter Release Mode without explicit intent
-
-The recipient install flow has NOT yet been exercised on a clean host. That's the
-next verification step.
-
-Tell me what you want to do — verify the install, onboard a family, fix a bug,
-cut v1.0.3, or extend features.
+Default to Docker Build Mode. Do not bump versions, edit the changelog, create
+Git tags, publish images, or use latest tags unless I explicitly ask for release
+or distribution work. Distinguish confirmed current state from new recommendations.
 ```

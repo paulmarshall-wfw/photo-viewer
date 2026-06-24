@@ -1,6 +1,9 @@
 node_modules/
 dist/
 server/data/
+deploy/.env
+deploy/data/
+config/applauncher.env
 .env
 *.log
 .DS_Store
