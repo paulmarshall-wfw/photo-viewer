@@ -87,8 +87,10 @@ export async function runIndex(folderRelativePath?: string, options: RunIndexOpt
     const normalizedFolderRelativePath = validateIndexTarget(folderRelativePath);
 
     // Phase 1: Scan filesystem. Folder indexing is shallow unless requested as a subtree.
-    if (normalizedFolderRelativePath) progress.scannedFolders = 1;
-    const entries = normalizedFolderRelativePath && !options.includeSubfolders
+    // The library root follows the same rule so the UI can offer distinct root actions.
+    const includeSubtree = options.includeSubfolders === true;
+    if (includeSubtree) progress.scannedFolders = 1;
+    const entries = !includeSubtree
       ? await scanSingleFolder(rootPath, scanRoot)
       : await scanDirectory(rootPath, scanRoot);
 
@@ -183,10 +185,10 @@ export async function runIndex(folderRelativePath?: string, options: RunIndexOpt
       progress.indexedFiles++;
     }
 
-    // Clean up deleted files (only for full index)
-    if (!normalizedFolderRelativePath) {
+    // Clean up deleted files within the same scope that was scanned.
+    if (!normalizedFolderRelativePath && includeSubtree) {
       cleanupDeleted(entries.files.map(f => f.relativePath), entries.folders.map(f => f.relativePath));
-    } else if (options.includeSubfolders) {
+    } else if (normalizedFolderRelativePath && includeSubtree) {
       cleanupDeletedInFolderTree(
         normalizedFolderRelativePath,
         entries.files.map(f => f.relativePath),
@@ -194,7 +196,7 @@ export async function runIndex(folderRelativePath?: string, options: RunIndexOpt
       );
     } else {
       // For single-folder index, only clean up files in that folder
-      cleanupDeletedInFolder(normalizedFolderRelativePath, entries.files.map(f => f.relativePath));
+      cleanupDeletedInFolder(normalizedFolderRelativePath ?? '', entries.files.map(f => f.relativePath));
     }
 
     // Update derived data after cleanup so counts and search do not keep deleted rows.
@@ -207,7 +209,7 @@ export async function runIndex(folderRelativePath?: string, options: RunIndexOpt
       .from(photos)
       .where(eq(photos.format, 'psd'))
       .all()
-      .filter(p => !normalizedFolderRelativePath || indexedFileSet.has(p.filePath))
+      .filter(p => indexedFileSet.has(p.filePath))
       .filter(p => !hasCachedPreview(p.id) || !hasCachedThumbnail(p.id));
 
     if (psdPhotos.length > 0) {

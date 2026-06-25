@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Settings, Activity, BookOpen, Images } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw, Settings, Activity, BookOpen, Images, AlertTriangle } from 'lucide-react';
 import type { Photo, SortField, SortOrder } from '@photo-viewer/shared';
 import { useCurrentUser, useLogout } from '../hooks/useAuth.js';
 import { useFolderContents, useTriggerIndex } from '../hooks/useFolders.js';
 import { useTheme } from '../hooks/useTheme.js';
+import { api } from '../api/client.js';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs.js';
 import { FolderCard } from '../components/photos/FolderCard.js';
 import { ThumbnailGrid } from '../components/photos/ThumbnailGrid.js';
@@ -23,6 +25,7 @@ interface BrowsePageProps {
 
 export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, onShowActivity }: BrowsePageProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useCurrentUser();
   const logout = useLogout();
   const triggerIndex = useTriggerIndex();
@@ -36,6 +39,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
 
   const { data, isLoading, error, refetch } = useFolderContents(folderPath, sort, order);
   const visibleSubfolders = data?.subfolders.filter((folder) => folder.photoCount > 0) ?? [];
+  const isIndexActionPending = triggerIndex.isPending;
 
   const handlePhotoClick = useCallback((photo: Photo) => {
     if (data?.photos) {
@@ -70,6 +74,28 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
       onSuccess: () => startPolling(),
       onError: () => setIndexProgress(null),
     });
+  };
+
+  const clearAndReindex = useMutation({
+    mutationFn: async () => {
+      await api.clearIndex();
+      return api.triggerIndex({ includeSubfolders: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folder-contents'] });
+      startPolling();
+    },
+    onError: () => setIndexProgress(null),
+  });
+
+  const handleClearAndReindex = () => {
+    const confirmed = confirm(
+      'Clear the full photo index and re-index the library folder and all child folders? Original photo files will not be changed.'
+    );
+    if (!confirmed) return;
+
+    setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
+    clearAndReindex.mutate();
   };
 
   return (
@@ -117,21 +143,30 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
           <button
             className="btn btn-ghost"
             onClick={() => handleIndex(false)}
-            disabled={triggerIndex.isPending}
-            title={folderPath ? 'Re-index files directly in this folder' : 'Re-index the full library'}
+            disabled={isIndexActionPending || clearAndReindex.isPending}
+            title={folderPath ? 'Re-index files directly in this folder' : 'Re-index files directly in the library folder'}
             style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
           >
-            <RefreshCw size={14} className={triggerIndex.isPending ? 'spinning' : ''} /> {folderPath ? 'Index Folder' : 'Index'}
+            <RefreshCw size={14} className={isIndexActionPending ? 'spinning' : ''} /> Index Folder
           </button>
-          {folderPath && (
+          <button
+            className="btn btn-ghost"
+            onClick={() => handleIndex(true)}
+            disabled={isIndexActionPending || clearAndReindex.isPending}
+            title={folderPath ? 'Re-index this folder and all subfolders' : 'Re-index the library folder and all child folders'}
+            style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
+          >
+            <RefreshCw size={14} className={isIndexActionPending ? 'spinning' : ''} /> Folder + Subfolders
+          </button>
+          {!folderPath && user.data?.role === 'admin' && (
             <button
-              className="btn btn-ghost"
-              onClick={() => handleIndex(true)}
-              disabled={triggerIndex.isPending}
-              title="Re-index this folder and all subfolders"
+              className="btn btn-danger"
+              onClick={handleClearAndReindex}
+              disabled={isIndexActionPending || clearAndReindex.isPending}
+              title="Clear the index, then re-index the library folder and all child folders"
               style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
             >
-              <RefreshCw size={14} className={triggerIndex.isPending ? 'spinning' : ''} /> Folder + Subfolders
+              <AlertTriangle size={14} /> Clear + Re-index
             </button>
           )}
           <select
@@ -298,9 +333,17 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
                 <button className="btn btn-primary" onClick={() => handleIndex(false)}>
                   <RefreshCw size={14} /> Run Indexer
                 </button>
-                {folderPath && (
-                  <button className="btn btn-ghost" onClick={() => handleIndex(true)} style={{ marginLeft: 8 }}>
-                    <RefreshCw size={14} /> Include Subfolders
+                <button className="btn btn-ghost" onClick={() => handleIndex(true)} style={{ marginLeft: 8 }}>
+                  <RefreshCw size={14} /> Include Subfolders
+                </button>
+                {!folderPath && user.data?.role === 'admin' && (
+                  <button
+                    className="btn btn-danger"
+                    onClick={handleClearAndReindex}
+                    disabled={clearAndReindex.isPending}
+                    style={{ marginLeft: 8 }}
+                  >
+                    <AlertTriangle size={14} /> Clear + Re-index
                   </button>
                 )}
               </div>
