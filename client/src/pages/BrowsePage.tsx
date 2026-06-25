@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Settings, Activity, BookOpen } from 'lucide-react';
+import { RefreshCw, Settings, Activity, BookOpen, Images } from 'lucide-react';
 import type { Photo, SortField, SortOrder } from '@photo-viewer/shared';
 import { useCurrentUser, useLogout } from '../hooks/useAuth.js';
 import { useFolderContents, useTriggerIndex } from '../hooks/useFolders.js';
@@ -143,6 +143,9 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
           />
           <button className="btn btn-ghost" onClick={onShowActivity} style={{ padding: '4px 8px' }} title="Activity">
             <Activity size={14} />
+          </button>
+          <button className="btn btn-ghost" onClick={() => navigate('/albums')} style={{ padding: '4px 8px', fontSize: 13 }}>
+            <Images size={14} /> Albums
           </button>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           {user.data?.role === 'admin' && (

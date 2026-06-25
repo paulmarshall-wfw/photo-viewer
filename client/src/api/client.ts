@@ -7,6 +7,12 @@ import type {
   InviteUserResponse,
   AdminConfigResponse,
   UpdateConfigRequest,
+  AlbumsResponse,
+  AlbumDetailResponse,
+  CreateAlbumRequest,
+  UpdateAlbumRequest,
+  ItemAlbumMembershipResponse,
+  AlbumSummary,
 } from '@photo-viewer/shared';
 
 const BASE = '/api';
@@ -72,4 +78,37 @@ export const api = {
 
   updateConfig: (data: UpdateConfigRequest) =>
     request<{ success: boolean; photosPath: string }>('/admin/config', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Albums
+  getAlbums: () => request<AlbumsResponse>('/albums'),
+
+  createAlbum: (data: CreateAlbumRequest) =>
+    request<AlbumSummary>('/albums', { method: 'POST', body: JSON.stringify(data) }),
+
+  getAlbum: (id: string) => request<AlbumDetailResponse>(`/albums/${id}`),
+
+  updateAlbum: (id: string, data: UpdateAlbumRequest) =>
+    request<AlbumSummary>(`/albums/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteAlbum: (id: string) =>
+    request<{ success: boolean }>(`/albums/${id}`, { method: 'DELETE' }),
+
+  getAlbumMembership: (item: { photoId?: string; folderPath?: string }) => {
+    const params = new URLSearchParams();
+    if (item.photoId) params.set('photoId', item.photoId);
+    if (item.folderPath) params.set('folderPath', item.folderPath);
+    return request<ItemAlbumMembershipResponse>(`/albums/membership?${params.toString()}`);
+  },
+
+  addFolderToAlbum: (albumId: string, folderPath: string) =>
+    request<{ success: boolean }>(`/albums/${albumId}/folders`, { method: 'POST', body: JSON.stringify({ folderPath }) }),
+
+  removeFolderFromAlbum: (albumId: string, folderPath: string) =>
+    request<{ success: boolean }>(`/albums/${albumId}/folders`, { method: 'DELETE', body: JSON.stringify({ folderPath }) }),
+
+  addPhotoToAlbum: (albumId: string, photoId: string) =>
+    request<{ success: boolean }>(`/albums/${albumId}/photos`, { method: 'POST', body: JSON.stringify({ photoId }) }),
+
+  removePhotoFromAlbum: (albumId: string, photoId: string) =>
+    request<{ success: boolean }>(`/albums/${albumId}/photos/${photoId}`, { method: 'DELETE' }),
 };

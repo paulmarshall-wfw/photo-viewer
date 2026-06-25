@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const configTable = sqliteTable('config', {
   key: text('key').primaryKey(),
@@ -126,3 +126,35 @@ export const dismissedOnThisDay = sqliteTable('dismissed_on_this_day', {
   userId: text('user_id').notNull(),
   dismissedDate: text('dismissed_date').notNull(),
 });
+
+export const albums = sqliteTable('albums', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  visibility: text('visibility', { enum: ['private', 'shared'] }).notNull().default('private'),
+  ownerUserId: text('owner_user_id').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+}, (table) => [
+  index('idx_albums_owner').on(table.ownerUserId),
+  index('idx_albums_visibility').on(table.visibility),
+]);
+
+export const albumFolders = sqliteTable('album_folders', {
+  albumId: text('album_id').notNull(),
+  folderPath: text('folder_path').notNull(),
+  addedByUserId: text('added_by_user_id').notNull(),
+  addedAt: text('added_at').notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.albumId, table.folderPath] }),
+  index('idx_album_folders_folder').on(table.folderPath),
+]);
+
+export const albumPhotos = sqliteTable('album_photos', {
+  albumId: text('album_id').notNull(),
+  photoId: text('photo_id').notNull(),
+  addedByUserId: text('added_by_user_id').notNull(),
+  addedAt: text('added_at').notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.albumId, table.photoId] }),
+  index('idx_album_photos_photo').on(table.photoId),
+]);

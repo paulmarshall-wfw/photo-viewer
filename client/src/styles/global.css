@@ -113,6 +113,25 @@ input, textarea, select {
   padding: 24px;
 }
 
+.album-card-action {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.album-card-shell:hover .album-card-action,
+.album-card-shell:focus-within .album-card-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .album-card-action {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* Spinning animation for index button */
 @keyframes spin {
   from { transform: rotate(0deg); }

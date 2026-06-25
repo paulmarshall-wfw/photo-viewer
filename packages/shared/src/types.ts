@@ -140,3 +140,42 @@ export interface AnnotationProgress {
   withCaption: number;
   withStory: number;
 }
+
+export type AlbumVisibility = 'private' | 'shared';
+
+export interface Album {
+  id: string;
+  name: string;
+  visibility: AlbumVisibility;
+  ownerUserId: string;
+  ownerDisplayName: string;
+  createdAt: string;
+  updatedAt: string;
+  canEdit: boolean;
+}
+
+export interface AlbumSummary extends Album {
+  folderCount: number;
+  explicitPhotoCount: number;
+  resolvedPhotoCount: number;
+}
+
+export interface AlbumFolder {
+  albumId: string;
+  folderPath: string;
+  folderName: string | null;
+  photoCount: number;
+  addedByUserId: string;
+  addedAt: string;
+}
+
+export interface AlbumDetail extends AlbumSummary {
+  folders: AlbumFolder[];
+  explicitPhotos: Photo[];
+  photos: Photo[];
+}
+
+export interface AlbumMembership {
+  album: AlbumSummary;
+  checked: boolean;
+}

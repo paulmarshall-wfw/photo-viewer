@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Heart, MessageCircle } from 'lucide-react';
 import type { Photo } from '@photo-viewer/shared';
+import { AlbumPickerButton } from '../albums/AlbumPickerButton.js';
 
 interface PhotoCardProps {
   photo: Photo;
@@ -12,21 +13,28 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
   const displayName = photo.filename;
 
   return (
-    <button
-      onClick={onClick}
+    <div
+      className="album-card-shell"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--bg-secondary)',
-        border: 'none',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'visible',
-        cursor: 'pointer',
-        padding: 0,
-        textAlign: 'left',
-        transition: 'all 0.2s ease',
         position: 'relative',
       }}
+    >
+      <button
+        onClick={onClick}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--bg-secondary)',
+          border: 'none',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'visible',
+          cursor: 'pointer',
+          padding: 0,
+          textAlign: 'left',
+          transition: 'all 0.2s ease',
+          position: 'relative',
+          width: '100%',
+        }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
         e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
@@ -37,7 +45,7 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
         e.currentTarget.style.boxShadow = 'none';
         setHovered(false);
       }}
-    >
+      >
       <div style={{
         width: '100%',
         paddingTop: '75%',
@@ -127,6 +135,10 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
           {displayName}
         </div>
       )}
-    </button>
+      </button>
+      <div className="album-card-action" style={{ position: 'absolute', top: 8, right: 8, zIndex: 30 }}>
+        <AlbumPickerButton photoId={photo.id} />
+      </div>
+    </div>
   );
 }

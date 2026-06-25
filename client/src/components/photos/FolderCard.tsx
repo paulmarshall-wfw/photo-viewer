@@ -1,5 +1,6 @@
 import { Folder as FolderIcon } from 'lucide-react';
 import type { Folder } from '@photo-viewer/shared';
+import { AlbumPickerButton } from '../albums/AlbumPickerButton.js';
 
 interface FolderCardProps {
   folder: Folder;
@@ -8,8 +9,9 @@ interface FolderCardProps {
 
 export function FolderCard({ folder, onClick }: FolderCardProps) {
   return (
-    <button
-      onClick={onClick}
+    <div className="album-card-shell" style={{ position: 'relative' }}>
+      <button
+        onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -33,7 +35,7 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = 'none';
       }}
-    >
+      >
       {folder.firstPhotoId ? (
         <img
           src={`/api/photos/${folder.firstPhotoId}/thumbnail?v=${encodeURIComponent(folder.indexedAt)}`}
@@ -75,6 +77,10 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
           {folder.photoCount} photo{folder.photoCount !== 1 ? 's' : ''}
         </div>
       </div>
-    </button>
+      </button>
+      <div className="album-card-action" style={{ position: 'absolute', top: 8, right: 8, zIndex: 30 }}>
+        <AlbumPickerButton folderPath={folder.path} />
+      </div>
+    </div>
   );
 }

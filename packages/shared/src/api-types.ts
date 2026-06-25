@@ -12,6 +12,10 @@ import type {
   Comment,
   Notification,
   OnThisDayPhoto,
+  AlbumDetail,
+  AlbumMembership,
+  AlbumSummary,
+  AlbumVisibility,
 } from './types.js';
 
 // Setup
@@ -192,4 +196,35 @@ export interface NotificationsResponse {
 export interface OnThisDayResponse {
   photos: OnThisDayPhoto[];
   dismissed: boolean;
+}
+
+// Albums
+export interface AlbumsResponse {
+  albums: AlbumSummary[];
+}
+
+export interface AlbumDetailResponse {
+  album: AlbumDetail;
+}
+
+export interface CreateAlbumRequest {
+  name: string;
+  visibility?: AlbumVisibility;
+}
+
+export interface UpdateAlbumRequest {
+  name?: string;
+  visibility?: AlbumVisibility;
+}
+
+export interface AlbumFolderMembershipRequest {
+  folderPath: string;
+}
+
+export interface AlbumPhotoMembershipRequest {
+  photoId: string;
+}
+
+export interface ItemAlbumMembershipResponse {
+  albums: AlbumMembership[];
 }

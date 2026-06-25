@@ -19,6 +19,7 @@ import { tagsRoutes } from './tags/routes.js';
 import { followsRoutes } from './follows/routes.js';
 import { notificationsRoutes } from './notifications/routes.js';
 import { onThisDayRoutes } from './on-this-day/routes.js';
+import { albumRoutes } from './albums/routes.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -49,6 +50,7 @@ export async function buildApp() {
   await app.register(followsRoutes);
   await app.register(notificationsRoutes);
   await app.register(onThisDayRoutes);
+  await app.register(albumRoutes);
 
   // Health check
   app.get('/api/health', async () => {
