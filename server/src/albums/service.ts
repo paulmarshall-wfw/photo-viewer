@@ -93,6 +93,11 @@ function albumSummarySelect(whereClause: string) {
                FROM album_folders af
                INNER JOIN photos p ON p.folder_path = af.folder_path
                WHERE af.album_id = a.id
+             ) resolved
+             WHERE NOT EXISTS (
+               SELECT 1
+               FROM album_photo_exclusions ape
+               WHERE ape.album_id = a.id AND ape.photo_id = resolved.id
              )
            ) AS resolved_photo_count
     FROM albums a
@@ -192,6 +197,11 @@ export function getAlbumDetail(albumId: string, user: CurrentUser): AlbumDetail 
     FROM album_photos ap
     INNER JOIN photos p ON p.id = ap.photo_id
     WHERE ap.album_id = ?
+      AND NOT EXISTS (
+        SELECT 1
+        FROM album_photo_exclusions ape
+        WHERE ape.album_id = ap.album_id AND ape.photo_id = p.id
+      )
     ORDER BY p.date_taken DESC, p.filename ASC
   `).all(albumId) as any[];
 
@@ -208,8 +218,13 @@ export function getAlbumDetail(albumId: string, user: CurrentUser): AlbumDetail 
       INNER JOIN photos pf ON pf.folder_path = af.folder_path
       WHERE af.album_id = ?
     )
+    AND NOT EXISTS (
+      SELECT 1
+      FROM album_photo_exclusions ape
+      WHERE ape.album_id = ? AND ape.photo_id = p.id
+    )
     ORDER BY p.date_taken DESC, p.filename ASC
-  `).all(albumId, albumId) as any[];
+  `).all(albumId, albumId, albumId) as any[];
 
   return {
     ...summary,
@@ -247,6 +262,7 @@ export function deleteAlbum(albumId: string, user: CurrentUser): { success: true
 
   sqlite.prepare(`DELETE FROM album_folders WHERE album_id = ?`).run(albumId);
   sqlite.prepare(`DELETE FROM album_photos WHERE album_id = ?`).run(albumId);
+  sqlite.prepare(`DELETE FROM album_photo_exclusions WHERE album_id = ?`).run(albumId);
   sqlite.prepare(`DELETE FROM albums WHERE id = ?`).run(albumId);
   return { success: true };
 }
@@ -290,6 +306,7 @@ export function addPhotoToAlbum(albumId: string, photoId: string, user: CurrentU
   if (!photo) return { error: 'Photo not found', status: 404 };
 
   const now = new Date().toISOString();
+  sqlite.prepare(`DELETE FROM album_photo_exclusions WHERE album_id = ? AND photo_id = ?`).run(albumId, photoId);
   sqlite.prepare(`
     INSERT OR IGNORE INTO album_photos (album_id, photo_id, added_by_user_id, added_at)
     VALUES (?, ?, ?, ?)
@@ -304,7 +321,15 @@ export function removePhotoFromAlbum(albumId: string, photoId: string, user: Cur
   if (!row) return { error: 'Album not found', status: 404 };
   if (!canEditAlbum(row, user)) return { error: 'Forbidden', status: 403 };
 
+  const photo = sqlite.prepare(`SELECT id FROM photos WHERE id = ?`).get(photoId);
+  if (!photo) return { error: 'Photo not found', status: 404 };
+
+  const now = new Date().toISOString();
   sqlite.prepare(`DELETE FROM album_photos WHERE album_id = ? AND photo_id = ?`).run(albumId, photoId);
-  sqlite.prepare(`UPDATE albums SET updated_at = ? WHERE id = ?`).run(new Date().toISOString(), albumId);
+  sqlite.prepare(`
+    INSERT OR IGNORE INTO album_photo_exclusions (album_id, photo_id, excluded_by_user_id, excluded_at)
+    VALUES (?, ?, ?, ?)
+  `).run(albumId, photoId, user.id, now);
+  sqlite.prepare(`UPDATE albums SET updated_at = ? WHERE id = ?`).run(now, albumId);
   return { success: true };
 }

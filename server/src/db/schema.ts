@@ -158,3 +158,13 @@ export const albumPhotos = sqliteTable('album_photos', {
   primaryKey({ columns: [table.albumId, table.photoId] }),
   index('idx_album_photos_photo').on(table.photoId),
 ]);
+
+export const albumPhotoExclusions = sqliteTable('album_photo_exclusions', {
+  albumId: text('album_id').notNull(),
+  photoId: text('photo_id').notNull(),
+  excludedByUserId: text('excluded_by_user_id').notNull(),
+  excludedAt: text('excluded_at').notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.albumId, table.photoId] }),
+  index('idx_album_photo_exclusions_photo').on(table.photoId),
+]);

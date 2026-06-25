@@ -11,6 +11,7 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
   return (
     <div className="album-card-shell" style={{ position: 'relative' }}>
       <button
+        className="focus-card folder-card-button"
         onClick={onClick}
       style={{
         display: 'flex',
@@ -18,22 +19,11 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
         gap: 14,
         padding: '14px 18px',
         background: 'var(--bg-secondary)',
-        border: 'none',
+        border: '1px solid var(--glass-border)',
         borderRadius: 'var(--radius-lg)',
         cursor: 'pointer',
         textAlign: 'left',
         width: '100%',
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'var(--bg-tertiary)';
-        e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'var(--bg-secondary)';
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
       }}
       >
       {folder.firstPhotoId ? (

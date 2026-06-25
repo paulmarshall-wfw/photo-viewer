@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Heart, MessageCircle } from 'lucide-react';
 import type { Photo } from '@photo-viewer/shared';
 import { AlbumPickerButton } from '../albums/AlbumPickerButton.js';
@@ -9,7 +8,6 @@ interface PhotoCardProps {
 }
 
 export function PhotoCard({ photo, onClick }: PhotoCardProps) {
-  const [hovered, setHovered] = useState(false);
   const displayName = photo.filename;
 
   return (
@@ -20,31 +18,21 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
       }}
     >
       <button
+        className="focus-card photo-card-button"
         onClick={onClick}
         style={{
           display: 'flex',
           flexDirection: 'column',
           background: 'var(--bg-secondary)',
-          border: 'none',
+          border: '1px solid var(--glass-border)',
           borderRadius: 'var(--radius-lg)',
           overflow: 'visible',
           cursor: 'pointer',
           padding: 0,
           textAlign: 'left',
-          transition: 'all 0.2s ease',
           position: 'relative',
           width: '100%',
         }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-        setHovered(true);
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0) scale(1)';
-        e.currentTarget.style.boxShadow = 'none';
-        setHovered(false);
-      }}
       >
       <div style={{
         width: '100%',
@@ -109,32 +97,6 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
         )}
       </div>
 
-      {/* Full filename tooltip on hover */}
-      {hovered && (
-        <div style={{
-          position: 'absolute',
-          bottom: 'calc(100% - 2px)',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--bg-elevated)',
-          color: 'var(--text-primary)',
-          fontSize: 11,
-          fontWeight: 500,
-          padding: '5px 10px',
-          borderRadius: 'var(--radius)',
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
-          zIndex: 100,
-          boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--glass-border)',
-          maxWidth: 280,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          opacity: 0.95,
-        }}>
-          {displayName}
-        </div>
-      )}
       </button>
       <div className="album-card-action" style={{ position: 'absolute', top: 8, right: 8, zIndex: 30 }}>
         <AlbumPickerButton photoId={photo.id} />

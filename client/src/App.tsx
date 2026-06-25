@@ -13,7 +13,6 @@ import { ViewerPage } from './pages/ViewerPage.js';
 import { SearchPage } from './pages/SearchPage.js';
 import { ActivityPage } from './pages/ActivityPage.js';
 import { AlbumsPage } from './pages/AlbumsPage.js';
-import { AlbumDetailPage } from './pages/AlbumDetailPage.js';
 import { ErrorBoundary } from './components/shared/ErrorBoundary.js';
 import { ThemeToggle } from './components/shared/ThemeToggle.js';
 import { ToastProvider } from './components/shared/Toast.js';
@@ -191,7 +190,7 @@ function AppRoutes() {
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/readme" element={<ReadmePage />} />
       <Route path="/albums" element={<AlbumsPage />} />
-      <Route path="/albums/:albumId" element={<AlbumDetailPage />} />
+      <Route path="/albums/:albumId" element={<AlbumsPage />} />
       <Route path="/invite/:token" element={<Navigate to="/" replace />} />
       <Route path="*" element={<MainApp />} />
     </Routes>

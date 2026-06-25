@@ -59,6 +59,20 @@ export function useDeleteAlbum() {
   });
 }
 
+export function useRemoveAlbumPhoto(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (photoId: string) => api.removePhotoFromAlbum(albumId, photoId),
+    onSuccess: async (_data, photoId) => {
+      invalidateAlbumData(queryClient, { photoId }, albumId);
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ['albums'], type: 'active' }),
+        queryClient.refetchQueries({ queryKey: ['album', albumId], type: 'active' }),
+      ]);
+    },
+  });
+}
+
 export function useAlbumMembership(item: AlbumItem, enabled: boolean) {
   return useQuery({
     queryKey: membershipKey(item),
