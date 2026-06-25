@@ -33,7 +33,8 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
   const [sort, setSort] = useState<SortField>('filename');
   const [order, setOrder] = useState<SortOrder>('asc');
 
-  const [indexProgress, setIndexProgress] = useState<{ phase: string; scannedFolders: number; scannedFiles: number; indexedFiles: number; totalFiles: number; previewsTotal: number; previewsDone: number } | null>(null);
+  const [indexProgress, setIndexProgress] = useState<{ phase: string; scannedFolders: number; scannedFiles: number; indexedFiles: number; totalFiles: number; previewsTotal: number; previewsDone: number; error?: string } | null>(null);
+  const [indexActionError, setIndexActionError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -54,13 +55,19 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
         const res = await fetch('/api/index/progress', { credentials: 'include' });
         const progress = await res.json();
         setIndexProgress(progress);
-        if (progress.phase === 'complete') {
+        if (progress.phase === 'complete' || progress.phase === 'error') {
           clearInterval(pollRef.current);
           pollRef.current = undefined;
-          refetch();
-          setTimeout(() => setIndexProgress(null), 3000);
+          if (progress.phase === 'complete') {
+            refetch();
+            setTimeout(() => setIndexProgress(null), 3000);
+          } else {
+            setIndexActionError(progress.error || 'Indexing failed.');
+          }
         }
-      } catch {}
+      } catch {
+        setIndexActionError('Could not check indexing progress.');
+      }
     }, 500);
   }, [refetch]);
 
@@ -69,10 +76,14 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
   }, []);
 
   const handleIndex = (includeSubfolders = false) => {
+    setIndexActionError(null);
     setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
     triggerIndex.mutate({ folderPath: folderPath || undefined, includeSubfolders }, {
       onSuccess: () => startPolling(),
-      onError: () => setIndexProgress(null),
+      onError: (error) => {
+        setIndexProgress(null);
+        setIndexActionError(error instanceof Error ? error.message : 'Could not start indexing.');
+      },
     });
   };
 
@@ -85,7 +96,10 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
       queryClient.invalidateQueries({ queryKey: ['folder-contents'] });
       startPolling();
     },
-    onError: () => setIndexProgress(null),
+    onError: (error) => {
+      setIndexProgress(null);
+      setIndexActionError(error instanceof Error ? error.message : 'Could not clear and re-index.');
+    },
   });
 
   const handleClearAndReindex = () => {
@@ -94,6 +108,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
     );
     if (!confirmed) return;
 
+    setIndexActionError(null);
     setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
     clearAndReindex.mutate();
   };
@@ -232,9 +247,13 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
               {indexProgress.phase === 'indexing' && `Indexing... ${indexProgress.indexedFiles} of ${indexProgress.totalFiles} files`}
               {indexProgress.phase === 'previews' && `Generating previews... ${indexProgress.previewsDone} of ${indexProgress.previewsTotal}`}
               {indexProgress.phase === 'complete' && `Indexing complete — ${indexProgress.totalFiles} files processed`}
+              {indexProgress.phase === 'error' && (indexProgress.error || 'Indexing failed.')}
             </span>
             {indexProgress.phase === 'complete' && (
               <span style={{ color: 'var(--success)', fontWeight: 500 }}>Done</span>
+            )}
+            {indexProgress.phase === 'error' && (
+              <span style={{ color: 'var(--danger)', fontWeight: 500 }}>Failed</span>
             )}
           </div>
           {indexProgress.phase === 'previews' && indexProgress.previewsTotal > 0 && (
@@ -264,6 +283,21 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
               }} />
             </div>
           )}
+        </div>
+      )}
+
+      {indexActionError && (
+        <div
+          role="alert"
+          style={{
+            padding: '8px 20px',
+            borderBottom: '1px solid var(--border-color)',
+            background: 'rgba(239, 68, 68, 0.12)',
+            color: 'var(--danger)',
+            fontSize: 13,
+          }}
+        >
+          {indexActionError}
         </div>
       )}
 

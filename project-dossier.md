@@ -41,7 +41,7 @@ Do not load this file by default. Use it only when the user asks for broader pro
 - Current schema stores photo index rows, title, caption, date, location, users, activity, tags, reactions, comments, follows, notifications, and On This Day dismissals in SQLite.
 - `server/src/metadata/routes.ts` still writes XMP sidecars for title, caption, and date, and writes story sidecar files for story entries.
 - Docker compose mounts the library read-only at `/library`, which conflicts with sidecar-writing routes unless the runtime mount or code behavior is changed.
-- `server/src/admin/service.ts` clears library-derived DB state and on-disk preview/thumbnail caches when the configured photo path changes. It preserves users, people-tag definitions, and activity history.
+- `server/src/admin/service.ts` clears library-derived DB state and on-disk preview/thumbnail caches when the configured photo path changes. It preserves users, people-tag definitions, and album shells; photo-linked activity rows are cleared with the photo index because they reference indexed photo IDs.
 - `photos_fts` is contentless FTS5. Deleting or updating indexed text must use the special FTS commands, not ordinary row deletion semantics.
 
 ## Docker And Release Notes

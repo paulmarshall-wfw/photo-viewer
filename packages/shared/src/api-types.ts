@@ -90,13 +90,14 @@ export interface IndexRequest {
 export interface IndexResponse {
   status: 'started' | 'already_running';
   progress: {
-    phase: 'scanning' | 'indexing' | 'previews' | 'complete';
+    phase: 'scanning' | 'indexing' | 'previews' | 'complete' | 'error';
     scannedFolders: number;
     scannedFiles: number;
     indexedFiles: number;
     totalFiles: number;
     previewsTotal: number;
     previewsDone: number;
+    error?: string;
   };
 }
 

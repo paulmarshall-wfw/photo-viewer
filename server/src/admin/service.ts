@@ -46,11 +46,11 @@ export function setPhotosPath(photosPath: string): void {
  *   - photos and folders
  *   - photos_fts
  *   - all photo-keyed social tables (reactions, comments, people-tag links,
- *     photo follows, notifications, on-this-day dismissals)
+ *     photo follows, notifications, activity, on-this-day dismissals)
  *   - album folder/photo membership rows that reference indexed folders/photos
  *   - on-disk preview + thumbnail caches
  *
- * Preserves: users, people_tag definitions, album shells, activity history.
+ * Preserves: users, people_tag definitions, album shells.
  */
 export function clearLibraryDerivedState(): void {
   const sqlite = getSqlite();
@@ -64,6 +64,7 @@ export function clearLibraryDerivedState(): void {
     DELETE FROM photo_follows;
     DELETE FROM notifications;
     DELETE FROM dismissed_on_this_day;
+    DELETE FROM activity;
     DELETE FROM photos;
     DELETE FROM folders;
     DROP TABLE IF EXISTS photos_fts;

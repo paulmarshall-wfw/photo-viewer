@@ -13,13 +13,14 @@ import { generateThumbnailFromPsd, generatePreviewFromPsd } from '../images/prev
 import { hasCachedThumbnail, hasCachedPreview, getThumbnailPath, getPreviewPath } from '../images/cache.js';
 
 export interface IndexProgress {
-  phase: 'scanning' | 'indexing' | 'previews' | 'complete';
+  phase: 'scanning' | 'indexing' | 'previews' | 'complete' | 'error';
   scannedFolders: number;
   scannedFiles: number;
   indexedFiles: number;
   totalFiles: number;
   previewsTotal: number;
   previewsDone: number;
+  error?: string;
 }
 
 export interface RunIndexOptions {
@@ -242,6 +243,13 @@ export async function runIndex(folderRelativePath?: string, options: RunIndexOpt
     }
 
     progress.phase = 'complete';
+  } catch (err) {
+    progress = {
+      ...progress,
+      phase: 'error',
+      error: err instanceof Error ? err.message : 'Indexing failed',
+    };
+    throw err;
   } finally {
     indexing = false;
   }
@@ -447,6 +455,7 @@ function deletePhotoIndexRow(photoId: string) {
   sqlite.prepare(`DELETE FROM comments WHERE photo_id = ?`).run(photoId);
   sqlite.prepare(`DELETE FROM photo_follows WHERE photo_id = ?`).run(photoId);
   sqlite.prepare(`DELETE FROM notifications WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM activity WHERE photo_id = ?`).run(photoId);
   sqlite.prepare(`DELETE FROM album_photos WHERE photo_id = ?`).run(photoId);
   sqlite.prepare(`DELETE FROM album_photo_exclusions WHERE photo_id = ?`).run(photoId);
   sqlite.prepare(`DELETE FROM photos WHERE id = ?`).run(photoId);
