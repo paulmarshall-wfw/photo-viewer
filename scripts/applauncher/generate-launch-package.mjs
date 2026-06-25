@@ -68,6 +68,7 @@ set -eu
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 package_root="$(CDPATH= cd -- "$script_dir/.." && pwd)"
 export APPLAUNCHER_PACKAGE_ROOT="\${APPLAUNCHER_PACKAGE_ROOT:-$package_root}"
+export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\${PATH:-}"
 exec ${JSON.stringify(process.execPath)} "$script_dir/package-control.mjs" ${JSON.stringify(operation)}
 `;
 }
