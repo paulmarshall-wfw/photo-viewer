@@ -89,17 +89,7 @@ function CommentItem({
             onChange={(e) => setReplyBody(e.target.value)}
             placeholder="Write a reply…"
             rows={2}
-            style={{
-              width: '100%',
-              fontSize: 13,
-              padding: 8,
-              borderRadius: 'var(--radius)',
-              background: 'var(--bg-primary)',
-              color: 'var(--text-primary)',
-              border: 'none',
-              resize: 'vertical',
-              fontFamily: 'inherit',
-            }}
+            className="metadata-comment-input"
           />
           <div style={{ display: 'flex', gap: 6, marginTop: 4, justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost" onClick={() => { setReplying(false); setReplyBody(''); }}>Cancel</button>
@@ -146,24 +136,14 @@ export function CommentThread({ photoId, currentUser }: CommentThreadProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: comments.length === 0 ? 0 : 12 }}>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder={comments.length === 0 ? 'Be the first to add a comment…' : 'Add a comment…'}
           rows={2}
           maxLength={500}
-          style={{
-            width: '100%',
-            fontSize: 13,
-            padding: 8,
-            borderRadius: 'var(--radius)',
-            background: 'var(--bg-primary)',
-            color: 'var(--text-primary)',
-            border: 'none',
-            resize: 'vertical',
-            fontFamily: 'inherit',
-          }}
+          className="metadata-comment-input"
         />
         {body.trim() && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>

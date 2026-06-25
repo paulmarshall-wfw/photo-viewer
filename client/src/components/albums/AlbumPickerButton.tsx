@@ -12,9 +12,21 @@ interface AlbumPickerButtonProps {
   photoId?: string;
   folderPath?: string;
   label?: string;
+  rootClassName?: string;
+  buttonClassName?: string;
+  buttonStyle?: React.CSSProperties;
+  iconSize?: number;
 }
 
-export function AlbumPickerButton({ photoId, folderPath, label = 'Add to album' }: AlbumPickerButtonProps) {
+export function AlbumPickerButton({
+  photoId,
+  folderPath,
+  label = 'Add to album',
+  rootClassName,
+  buttonClassName,
+  buttonStyle,
+  iconSize = 14,
+}: AlbumPickerButtonProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [newName, setNewName] = useState('');
@@ -53,26 +65,30 @@ export function AlbumPickerButton({ photoId, folderPath, label = 'Add to album' 
 
   return (
     <div
+      className={rootClassName}
       style={{ position: 'relative', display: 'inline-flex' }}
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
     >
       <button
         type="button"
-        className="btn btn-ghost"
+        className={buttonClassName ? `btn btn-ghost ${buttonClassName}` : 'btn btn-ghost'}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={label}
         title={label}
         style={{
-          padding: 6,
-          background: 'var(--bg-elevated)',
-          boxShadow: 'var(--shadow)',
-          border: '1px solid var(--glass-border)',
+          ...(buttonClassName ? {} : {
+            padding: 6,
+            background: 'var(--bg-elevated)',
+            boxShadow: 'var(--shadow)',
+            border: '1px solid var(--glass-border)',
+          }),
+          ...buttonStyle,
         }}
       >
-        <Images size={14} />
+        <Images size={iconSize} />
       </button>
 
       {open && (

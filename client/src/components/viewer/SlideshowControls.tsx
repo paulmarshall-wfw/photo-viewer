@@ -8,18 +8,29 @@ interface SlideshowControlsProps {
   onToggle: () => void;
   onIntervalChange: (seconds: number) => void;
   onLoopChange: (loop: boolean) => void;
+  buttonClassName?: string;
+  iconSize?: number;
 }
 
-export function SlideshowControls({ isPlaying, interval, loop, onToggle, onIntervalChange, onLoopChange }: SlideshowControlsProps) {
+export function SlideshowControls({
+  isPlaying,
+  interval,
+  loop,
+  onToggle,
+  onIntervalChange,
+  onLoopChange,
+  buttonClassName,
+  iconSize = 16,
+}: SlideshowControlsProps) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <button
-        className="btn btn-ghost"
+        className={buttonClassName ? `btn btn-ghost ${buttonClassName}` : 'btn btn-ghost'}
         onClick={onToggle}
-        style={{ padding: '4px 8px' }}
+        style={buttonClassName ? undefined : { padding: '4px 8px' }}
         title={isPlaying ? 'Pause slideshow' : 'Start slideshow'}
       >
-        {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        {isPlaying ? <Pause size={iconSize} /> : <Play size={iconSize} />}
       </button>
       {isPlaying && (
         <>
@@ -34,12 +45,12 @@ export function SlideshowControls({ isPlaying, interval, loop, onToggle, onInter
             ))}
           </select>
           <button
-            className="btn btn-ghost"
+            className={buttonClassName ? `btn btn-ghost ${buttonClassName}` : 'btn btn-ghost'}
             onClick={() => onLoopChange(!loop)}
-            style={{ padding: '4px 8px' }}
+            style={buttonClassName ? undefined : { padding: '4px 8px' }}
             title={loop ? 'Continuous: will loop back to start' : 'Stops at last photo'}
           >
-            {loop ? <Repeat size={14} /> : <ArrowRightToLine size={14} />}
+            {loop ? <Repeat size={iconSize - 2} /> : <ArrowRightToLine size={iconSize - 2} />}
           </button>
         </>
       )}

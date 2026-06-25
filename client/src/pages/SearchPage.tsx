@@ -32,7 +32,7 @@ export function SearchPage({ initialQuery, onBack, onPhotoSelect }: SearchPagePr
   if (needsCaption) params.set('needsCaption', 'true');
   if (needsStory) params.set('needsStory', 'true');
 
-  const searchQuery = useQuery<{ results: (Photo & { folder_name: string })[]; total: number }>({
+  const searchQuery = useQuery<{ results: (Photo & { folderName: string })[]; total: number }>({
     queryKey: ['search', query, dateFrom, dateTo, needsTitle, needsCaption, needsStory],
     queryFn: async () => {
       const res = await fetch(`/api/search?${params.toString()}`, { credentials: 'include' });

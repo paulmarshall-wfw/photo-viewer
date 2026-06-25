@@ -49,6 +49,7 @@ function rowToPhoto(r: any): Photo {
     hasThumbnail: !!r.has_thumbnail,
     hasPreview: !!r.has_preview,
     location: r.location,
+    orientationDeg: r.orientation_degrees ?? 0,
     indexedAt: r.indexed_at,
     reactionCount: r.reaction_count ?? 0,
     commentCount: r.comment_count ?? 0,

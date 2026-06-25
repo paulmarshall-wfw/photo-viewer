@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { ArrowLeft, Download, BookOpen, Settings, Folder } from 'lucide-react';
+import { ArrowLeft, Download, BookOpen, Settings, Folder, RotateCcw, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo, Theme, User } from '@photo-viewer/shared';
 import { ImageDisplay } from '../components/viewer/ImageDisplay.js';
@@ -10,8 +10,10 @@ import { FullscreenWrapper, FullscreenButton } from '../components/viewer/Fullsc
 import { InfoPanel } from '../components/viewer/InfoPanel.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
 import { NotificationBell } from '../components/shared/NotificationBell.js';
+import { AlbumPickerButton } from '../components/albums/AlbumPickerButton.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { useLogout } from '../hooks/useAuth.js';
+import { useToast } from '../components/shared/Toast.js';
 
 interface ViewerPageProps {
   photo: Photo;
@@ -20,6 +22,7 @@ interface ViewerPageProps {
   currentUser: User;
   onBack: () => void;
   onPhotoChange: (photo: Photo) => void;
+  onPhotoUpdate: (photoId: string, updates: Partial<Photo>) => void;
   onToggleInfo: () => void;
   showInfo: boolean;
 }
@@ -31,11 +34,13 @@ export function ViewerPage({
   currentUser,
   onBack,
   onPhotoChange,
+  onPhotoUpdate,
   onToggleInfo,
   showInfo,
 }: ViewerPageProps) {
   const navigate = useNavigate();
   const { theme: currentTheme, toggleTheme } = useTheme();
+  const { showError } = useToast();
   const logout = useLogout();
   const [slideshowPlaying, setSlideshowPlaying] = useState(false);
   const [slideshowInterval, setSlideshowInterval] = useState(5);
@@ -85,9 +90,29 @@ export function ViewerPage({
     link.click();
   };
 
-  const handlePhotoUpdate = (updates: Partial<Photo>) => {
+  const handlePhotoUpdate = useCallback((updates: Partial<Photo>) => {
     setLocalPhoto((prev) => ({ ...prev, ...updates }));
-  };
+    onPhotoUpdate(localPhoto.id, updates);
+  }, [localPhoto.id, onPhotoUpdate]);
+
+  const handleRotate = useCallback(async (delta: 90 | -90) => {
+    const previousOrientation = localPhoto.orientationDeg ?? 0;
+    const orientationDeg = ((previousOrientation + delta + 360) % 360) as Photo['orientationDeg'];
+    handlePhotoUpdate({ orientationDeg });
+
+    try {
+      const res = await fetch(`/api/photos/${localPhoto.id}/orientation`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orientationDeg }),
+      });
+      if (!res.ok) throw new Error('Request failed');
+    } catch {
+      handlePhotoUpdate({ orientationDeg: previousOrientation });
+      showError('Failed to save image orientation');
+    }
+  }, [handlePhotoUpdate, localPhoto.id, localPhoto.orientationDeg, showError]);
 
 
   return (
@@ -192,42 +217,61 @@ export function ViewerPage({
             <div style={{ flex: 1 }} />
           </div>
 
-          {/* Centred toolbar: slideshow, download, info */}
+          {/* Centred toolbar: slideshow, rotate, download, albums, info */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: 8,
             padding: '4px 0 8px',
             flexShrink: 0,
           }}>
-            <SlideshowControls
-              isPlaying={slideshowPlaying}
-              interval={slideshowInterval}
-              loop={slideshowLoop}
-              onToggle={() => setSlideshowPlaying(!slideshowPlaying)}
-              onIntervalChange={setSlideshowInterval}
-              onLoopChange={setSlideshowLoop}
-            />
-            <button className="btn btn-ghost" onClick={handleDownload} style={{ padding: '4px 8px' }} title="Download original">
-              <Download size={16} />
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={onToggleInfo}
-              style={{
-                padding: '4px 10px',
-                fontSize: 16,
-                fontWeight: 600,
-                fontFamily: 'Georgia, serif',
-                fontStyle: 'italic',
-                background: 'var(--accent)',
-                color: '#fff',
-              }}
-              title="Photo information"
-            >
-              i
-            </button>
+            <div className="viewer-action-toolbar" aria-label="Photo actions">
+              <SlideshowControls
+                isPlaying={slideshowPlaying}
+                interval={slideshowInterval}
+                loop={slideshowLoop}
+                onToggle={() => setSlideshowPlaying(!slideshowPlaying)}
+                onIntervalChange={setSlideshowInterval}
+                onLoopChange={setSlideshowLoop}
+                buttonClassName="viewer-icon-button"
+                iconSize={20}
+              />
+              <button
+                className="btn btn-ghost viewer-icon-button"
+                onClick={() => handleRotate(-90)}
+                title="Rotate counter-clockwise"
+                aria-label="Rotate counter-clockwise"
+              >
+                <RotateCcw size={20} />
+              </button>
+              <button
+                className="btn btn-ghost viewer-icon-button"
+                onClick={() => handleRotate(90)}
+                title="Rotate clockwise"
+                aria-label="Rotate clockwise"
+              >
+                <RotateCw size={20} />
+              </button>
+              <button className="btn btn-ghost viewer-icon-button" onClick={handleDownload} title="Download original" aria-label="Download original">
+                <Download size={20} />
+              </button>
+              <AlbumPickerButton
+                photoId={localPhoto.id}
+                label="Add to album"
+                rootClassName="viewer-album-action"
+                buttonClassName="viewer-icon-button"
+                iconSize={20}
+              />
+              <button
+                className={`btn btn-ghost viewer-icon-button viewer-info-button${showInfo ? ' viewer-icon-button-active' : ''}`}
+                onClick={onToggleInfo}
+                title={showInfo ? 'Hide photo information' : 'Show photo information'}
+                aria-label={showInfo ? 'Hide photo information' : 'Show photo information'}
+                aria-pressed={showInfo}
+              >
+                i
+              </button>
+            </div>
           </div>
 
           {/* Main image */}

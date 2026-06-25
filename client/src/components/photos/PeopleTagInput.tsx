@@ -48,34 +48,26 @@ export function PeopleTagInput({ photoId }: PeopleTagInputProps) {
   };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-        {photoTags.map(tag => (
+    <div ref={wrapRef} className="people-tag-control">
+      {photoTags.length > 0 && (
+        <div className="people-tag-list">
+          {photoTags.map(tag => (
           <span
             key={tag.id}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '3px 10px',
-              borderRadius: 9999,
-              background: 'var(--bg-tertiary)',
-              fontSize: 12,
-              color: 'var(--text-primary)',
-            }}
+            className="people-tag-pill"
           >
             {tag.name}
             <button
               onClick={() => removeMut.mutate(tag.id)}
-              style={{
-                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center',
-              }}
+              className="people-tag-remove-button"
               aria-label={`Remove ${tag.name}`}
             >
               <X size={12} />
             </button>
           </span>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <input
         type="text"
@@ -90,40 +82,16 @@ export function PeopleTagInput({ photoId }: PeopleTagInputProps) {
           }
         }}
         placeholder="Tag a person…"
-        style={{
-          width: '100%',
-          fontSize: 13,
-          padding: '6px 10px',
-          borderRadius: 'var(--radius)',
-          background: 'var(--bg-primary)',
-          color: 'var(--text-primary)',
-          border: 'none',
-          fontFamily: 'inherit',
-        }}
+        className="metadata-edit-input metadata-tag-input"
       />
 
       {focused && (suggestions.length > 0 || showCreate) && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          marginTop: 4,
-          background: 'var(--bg-elevated)',
-          borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow-lg)',
-          zIndex: 50,
-          overflow: 'hidden',
-        }}>
+        <div className="people-tag-suggestions">
           {suggestions.map(s => (
             <button
               key={s.id}
               onClick={() => addTag(s.name)}
-              style={{
-                display: 'block', width: '100%', padding: '8px 12px',
-                fontSize: 13, textAlign: 'left', background: 'none',
-                border: 'none', cursor: 'pointer', color: 'var(--text-primary)',
-              }}
+              className="people-tag-suggestion-button"
             >
               {s.name}
             </button>
@@ -131,12 +99,7 @@ export function PeopleTagInput({ photoId }: PeopleTagInputProps) {
           {showCreate && (
             <button
               onClick={() => addTag(value)}
-              style={{
-                display: 'block', width: '100%', padding: '8px 12px',
-                fontSize: 13, textAlign: 'left', background: 'none',
-                border: 'none', cursor: 'pointer', color: 'var(--text-primary)',
-                fontStyle: 'italic',
-              }}
+              className="people-tag-suggestion-button people-tag-suggestion-create"
             >
               Create "{value.trim()}"
             </button>

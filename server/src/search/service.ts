@@ -64,7 +64,27 @@ export function searchPhotos(params: SearchParams) {
   const total = sqlite.prepare(countQuery).get(...countValues) as any;
 
   return {
-    results: rows,
+    results: rows.map((r: any) => ({
+      id: r.id,
+      folderPath: r.folder_path,
+      filename: r.filename,
+      filePath: r.file_path,
+      fileSize: r.file_size,
+      fileModifiedAt: r.file_modified_at,
+      format: r.format,
+      width: r.width,
+      height: r.height,
+      title: r.title,
+      caption: r.caption,
+      dateTaken: r.date_taken,
+      hasStory: !!r.has_story,
+      hasThumbnail: !!r.has_thumbnail,
+      hasPreview: !!r.has_preview,
+      location: r.location,
+      orientationDeg: r.orientation_degrees ?? 0,
+      indexedAt: r.indexed_at,
+      folderName: r.folder_name,
+    })),
     total: total?.count ?? 0,
   };
 }

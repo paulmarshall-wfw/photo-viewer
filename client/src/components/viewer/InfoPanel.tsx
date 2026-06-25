@@ -68,24 +68,12 @@ function combineDatetime(date: string, time: string): string {
   return `${date}T${time}`;
 }
 
-const LABEL_STYLE: React.CSSProperties = {
-  display: 'block',
-  fontSize: 10,
-  fontWeight: 600,
-  color: 'var(--text-muted)',
-  marginBottom: 2,
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-};
-
 function InfoField({ label, editedBy, children }: { label: string; editedBy?: string; children: React.ReactNode }) {
   return (
-    <div>
-      <label style={LABEL_STYLE}>{label}</label>
+    <div className="metadata-field-card">
+      <label className="metadata-field-label">{label}</label>
       {children}
-      {editedBy && (
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Edited by {editedBy}</div>
-      )}
+      {editedBy && <div className="metadata-edited-by">Edited by {editedBy}</div>}
     </div>
   );
 }
@@ -117,58 +105,44 @@ function DateTimeFields({ dateTaken, onSave, editedBy }: { dateTaken: string; on
     }
   };
 
-  const fieldStyle: React.CSSProperties = {
-    fontSize: 14,
-    padding: '4px 8px',
-    border: '1px solid var(--border-color)',
-    borderRadius: 'var(--radius)',
-    background: 'var(--bg-primary)',
-    color: 'var(--text-primary)',
-    width: '100%',
-  };
-
-  const displayStyle: React.CSSProperties = { fontSize: 13, cursor: 'pointer', padding: 0 };
-
   return (
-    <div style={{ display: 'flex', gap: 12 }}>
-      <div style={{ flex: 1 }}>
-        <label style={LABEL_STYLE}>Date</label>
+    <div className="metadata-date-time-grid">
+      <div className="metadata-field-card">
+        <label className="metadata-field-label">Date</label>
         {editingDate ? (
           <input
             type="date"
+            className="input metadata-edit-input"
             value={dateValue}
             onChange={(e) => setDateValue(e.target.value)}
             onBlur={() => saveDate(dateValue)}
             onKeyDown={(e) => { if (e.key === 'Enter') saveDate(dateValue); if (e.key === 'Escape') { setDateValue(date); setEditingDate(false); } }}
-            style={fieldStyle}
             autoFocus
           />
         ) : (
-          <div onClick={() => setEditingDate(true)} style={{ ...displayStyle, color: date ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+          <button type="button" className={`metadata-value-button${date ? '' : ' inline-edit-empty'}`} onClick={() => setEditingDate(true)}>
             {date ? formatDateForDisplay(date) : 'Add date...'}
-          </div>
+          </button>
         )}
       </div>
-      <div style={{ flex: 1 }}>
-        <label style={LABEL_STYLE}>Time</label>
+      <div className="metadata-field-card">
+        <label className="metadata-field-label">Time</label>
         {editingTime ? (
           <input
             type="time"
+            className="input metadata-edit-input"
             value={timeValue.slice(0, 5)}
             onChange={(e) => setTimeValue(e.target.value + (timeValue.length > 5 ? timeValue.slice(5) : ':00'))}
             onBlur={() => saveTime(timeValue)}
             onKeyDown={(e) => { if (e.key === 'Enter') saveTime(timeValue); if (e.key === 'Escape') { setTimeValue(time); setEditingTime(false); } }}
-            style={fieldStyle}
             autoFocus
           />
         ) : (
-          <div onClick={() => setEditingTime(true)} style={{ ...displayStyle, color: time ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+          <button type="button" className={`metadata-value-button${time ? '' : ' inline-edit-empty'}`} onClick={() => setEditingTime(true)}>
             {time ? formatTimeForDisplay(time) : 'Add time...'}
-          </div>
+          </button>
         )}
-        {editedBy && (
-          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>Edited by {editedBy}</div>
-        )}
+        {editedBy && <div className="metadata-edited-by">Edited by {editedBy}</div>}
       </div>
     </div>
   );
@@ -235,12 +209,9 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
   const meta = metadataQuery.data?.metadata;
 
   return (
-    <div style={{
-      width: 360,
+    <div className="info-panel" style={{
       overflow: 'auto',
-      padding: 24,
       flexShrink: 0,
-      background: 'var(--bg-secondary)',
     }}>
       {/* Filename header + actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 16 }}>
@@ -258,15 +229,7 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
           {photo.filename}
         </h2>
         <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
-          <button
-            className="btn btn-ghost"
-            onClick={() => toggleFollow.mutate(!following)}
-            title={following ? 'Unfollow' : 'Follow'}
-            style={{ padding: '4px', color: following ? 'var(--text-primary)' : 'var(--text-muted)' }}
-          >
-            {following ? <Bell size={16} /> : <BellOff size={16} />}
-          </button>
-          <button className="btn btn-ghost" onClick={onClose} style={{ padding: '4px' }}>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Hide photo information" style={{ padding: '4px' }}>
             <X size={16} />
           </button>
         </div>
@@ -280,19 +243,31 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
         <span>{(photo.fileSize / 1024 / 1024).toFixed(1)} MB</span>
       </div>
 
-      {/* Reactions — directly under file info */}
-      <ReactionBar photoId={photo.id} currentUserId={currentUser.id} />
+      {/* Reactions and photo notification follow */}
+      <div className="photo-reaction-row">
+        <ReactionBar photoId={photo.id} currentUserId={currentUser.id} />
+        <button
+          className={`btn btn-ghost photo-follow-button${following ? ' photo-follow-button-active' : ''}`}
+          onClick={() => toggleFollow.mutate(!following)}
+          aria-label={following ? 'Turn off photo notifications' : 'Turn on photo notifications'}
+          title={following ? 'Turn off photo notifications' : 'Turn on photo notifications'}
+          aria-pressed={following}
+        >
+          {following ? <Bell size={32} /> : <BellOff size={32} />}
+        </button>
+      </div>
 
       <div style={{ height: 20 }} />
 
       {/* Metadata — compact */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13 }}>
+      <div className="metadata-stack">
         <InfoField label="Title" editedBy={meta?.titleEditedBy}>
           <InlineEdit
             value={photo.title || ''}
             placeholder="Add a title..."
             onSave={(v) => updateTitle.mutate(v)}
-            style={{ fontSize: 13 }}
+            className="metadata-edit-value"
+            inputClassName="metadata-edit-input"
           />
         </InfoField>
 
@@ -301,7 +276,8 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
             value={photo.caption || ''}
             placeholder="Add a caption..."
             onSave={(v) => updateCaption.mutate(v)}
-            style={{ fontSize: 13 }}
+            className="metadata-edit-value"
+            inputClassName="metadata-edit-input"
           />
         </InfoField>
 
@@ -316,7 +292,8 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
             value={photo.location || ''}
             placeholder="Add a location..."
             onSave={(v) => updateLocation.mutate(v)}
-            style={{ fontSize: 13 }}
+            className="metadata-edit-value"
+            inputClassName="metadata-edit-input"
           />
         </InfoField>
 
@@ -328,8 +305,8 @@ export function InfoPanel({ photo, currentUser, onClose, onPhotoUpdate }: InfoPa
       <div style={{ height: 1, background: 'var(--border-color)', margin: '20px 0' }} />
 
       {/* Comments */}
-      <div>
-        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <div className="metadata-field-card metadata-comments-field">
+        <label className="metadata-field-label">
           Comments
         </label>
         <CommentThread photoId={photo.id} currentUser={currentUser} />

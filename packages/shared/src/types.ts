@@ -35,6 +35,7 @@ export interface Photo {
   hasThumbnail: boolean;
   hasPreview: boolean;
   location: string | null;
+  orientationDeg: OrientationDegrees;
   indexedAt: string;
   reactionCount?: number;
   commentCount?: number;
@@ -60,6 +61,7 @@ export interface ActivityEntry {
 }
 
 export type ImageFormat = 'jpeg' | 'tiff' | 'png' | 'raw' | 'psd';
+export type OrientationDegrees = 0 | 90 | 180 | 270;
 
 export type ActivityAction =
   | 'set_title'
@@ -74,7 +76,8 @@ export type ActivityAction =
   | 'delete_comment'
   | 'add_people_tag'
   | 'remove_people_tag'
-  | 'set_location';
+  | 'set_location'
+  | 'set_orientation';
 
 export type SortField = 'date' | 'filename' | 'annotation' | 'timeline';
 export type SortOrder = 'asc' | 'desc';

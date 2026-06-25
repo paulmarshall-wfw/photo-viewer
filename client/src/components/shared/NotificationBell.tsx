@@ -62,41 +62,16 @@ export function NotificationBell({ onNavigateToPhoto }: NotificationBellProps = 
   };
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
+    <div ref={wrapRef} className="notification-bell-wrap">
       <button
+        className={`notification-bell-button${open ? ' notification-bell-button-open' : ''}`}
         onClick={() => setOpen(o => !o)}
         aria-label="Notifications"
-        style={{
-          position: 'relative',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 6,
-          color: 'var(--text-primary)',
-          display: 'inline-flex',
-          alignItems: 'center',
-          borderRadius: 'var(--radius)',
-        }}
+        aria-expanded={open}
       >
-        <Bell size={18} />
+        <Bell size={22} strokeWidth={2.4} />
         {unread > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: 2,
-            right: 2,
-            minWidth: 16,
-            height: 16,
-            padding: '0 4px',
-            background: '#ef4444',
-            color: 'white',
-            borderRadius: 9999,
-            fontSize: 10,
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            lineHeight: 1,
-          }}>
+          <span className="notification-bell-badge">
             {unread > 99 ? '99+' : unread}
           </span>
         )}

@@ -16,6 +16,7 @@ import type {
   AlbumMembership,
   AlbumSummary,
   AlbumVisibility,
+  OrientationDegrees,
 } from './types.js';
 
 // Setup
@@ -178,6 +179,10 @@ export interface AllPeopleTagsResponse {
 // Location
 export interface UpdateLocationRequest {
   location: string;
+}
+
+export interface UpdateOrientationRequest {
+  orientationDeg: OrientationDegrees;
 }
 
 // Follows

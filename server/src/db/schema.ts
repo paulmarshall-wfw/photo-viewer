@@ -46,6 +46,7 @@ export const photos = sqliteTable('photos', {
   thumbnailPath: text('thumbnail_path'),
   previewPath: text('preview_path'),
   location: text('location'),
+  orientationDeg: integer('orientation_degrees').notNull().default(0),
   indexedAt: text('indexed_at').notNull(),
 }, (table) => [
   index('idx_photos_folder').on(table.folderPath),

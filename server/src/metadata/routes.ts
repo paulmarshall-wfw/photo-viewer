@@ -37,6 +37,13 @@ function getAbsolutePhotoPath(filePath: string): string | null {
   return path.join(photosPath, filePath);
 }
 
+function normalizeOrientation(value: unknown): 0 | 90 | 180 | 270 | null {
+  if (value !== 0 && value !== 90 && value !== 180 && value !== 270) {
+    return null;
+  }
+  return value;
+}
+
 export async function metadataRoutes(app: FastifyInstance) {
   // Update title
   app.patch<{ Params: { id: string }; Body: { title: string } }>('/api/photos/:id/title', async (request, reply) => {
@@ -214,5 +221,22 @@ export async function metadataRoutes(app: FastifyInstance) {
     createNotifications(photo.id, request.user!.id, 'set_location', location);
 
     return { success: true, location };
+  });
+
+  // Update display orientation (DB only, non-destructive)
+  app.patch<{ Params: { id: string }; Body: { orientationDeg: number } }>('/api/photos/:id/orientation', async (request, reply) => {
+    const db = getDb();
+    const photo = db.select().from(photos).where(eq(photos.id, request.params.id)).get();
+    if (!photo) return reply.code(404).send({ error: 'Photo not found' });
+
+    const orientationDeg = normalizeOrientation(request.body.orientationDeg);
+    if (orientationDeg === null) {
+      return reply.code(400).send({ error: 'Orientation must be 0, 90, 180, or 270 degrees' });
+    }
+
+    db.update(photos).set({ orientationDeg }).where(eq(photos.id, photo.id)).run();
+    logActivity(request.user!.id, photo.id, 'set_orientation', JSON.stringify({ orientationDeg }));
+
+    return { success: true, orientationDeg };
   });
 }

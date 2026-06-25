@@ -195,7 +195,7 @@ export function AlbumsPage() {
   const [name, setName] = useState('');
   const [visibility, setVisibility] = useState<AlbumVisibility>('private');
   const [viewerState, setViewerState] = useState<{ photo: Photo; allPhotos: Photo[] } | null>(null);
-  const [showInfo, setShowInfo] = useState(false);
+  const [showInfo, setShowInfo] = useState(true);
 
   const selectedSummary = albums.data?.find((item) => item.id === albumId);
 
@@ -211,7 +211,7 @@ export function AlbumsPage() {
 
   useEffect(() => {
     setViewerState(null);
-    setShowInfo(false);
+    setShowInfo(true);
   }, [albumId]);
 
   const handleCreate = (event: React.FormEvent) => {
@@ -241,10 +241,22 @@ export function AlbumsPage() {
   const handlePhotoOpen = (photo: Photo) => {
     if (!album.data) return;
     setViewerState({ photo, allPhotos: album.data.photos });
+    setShowInfo(true);
   };
 
   const handlePhotoChange = (photo: Photo) => {
     setViewerState((prev) => prev ? { ...prev, photo } : null);
+  };
+
+  const handleViewerPhotoUpdate = (photoId: string, updates: Partial<Photo>) => {
+    setViewerState((prev) => {
+      if (!prev) return null;
+      const updatePhoto = (item: Photo) => item.id === photoId ? { ...item, ...updates } : item;
+      return {
+        photo: updatePhoto(prev.photo),
+        allPhotos: prev.allPhotos.map(updatePhoto),
+      };
+    });
   };
 
   const handleRemovePhoto = (photo: Photo) => {
@@ -265,7 +277,8 @@ export function AlbumsPage() {
         currentUser={user.data}
         onBack={() => setViewerState(null)}
         onPhotoChange={handlePhotoChange}
-        onToggleInfo={() => setShowInfo(!showInfo)}
+        onPhotoUpdate={handleViewerPhotoUpdate}
+        onToggleInfo={() => setShowInfo((visible) => !visible)}
         showInfo={showInfo}
       />
     );

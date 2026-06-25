@@ -34,7 +34,7 @@ function MainApp() {
   const [view, setView] = useState<AppView>('browse');
   const [folderPath, setFolderPath] = useState('');
   const [viewerState, setViewerState] = useState<{ photo: Photo; allPhotos: Photo[] } | null>(null);
-  const [showInfo, setShowInfo] = useState(false);
+  const [showInfo, setShowInfo] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleNavigate = useCallback((path: string) => {
@@ -45,6 +45,7 @@ function MainApp() {
 
   const handlePhotoSelect = useCallback((photo: Photo, allPhotos: Photo[]) => {
     setViewerState({ photo, allPhotos });
+    setShowInfo(true);
     setView('viewer');
   }, []);
 
@@ -59,6 +60,17 @@ function MainApp() {
 
   const handlePhotoChange = useCallback((photo: Photo) => {
     setViewerState((prev) => prev ? { ...prev, photo } : null);
+  }, []);
+
+  const handleViewerPhotoUpdate = useCallback((photoId: string, updates: Partial<Photo>) => {
+    setViewerState((prev) => {
+      if (!prev) return null;
+      const updatePhoto = (item: Photo) => item.id === photoId ? { ...item, ...updates } : item;
+      return {
+        photo: updatePhoto(prev.photo),
+        allPhotos: prev.allPhotos.map(updatePhoto),
+      };
+    });
   }, []);
 
   const handleSearch = useCallback((query: string) => {
@@ -80,7 +92,8 @@ function MainApp() {
         currentUser={currentUser.data!}
         onBack={handleBack}
         onPhotoChange={handlePhotoChange}
-        onToggleInfo={() => setShowInfo(!showInfo)}
+        onPhotoUpdate={handleViewerPhotoUpdate}
+        onToggleInfo={() => setShowInfo((visible) => !visible)}
         showInfo={showInfo}
       />
     );

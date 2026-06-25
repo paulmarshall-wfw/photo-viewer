@@ -4,11 +4,13 @@ interface InlineEditProps {
   value: string;
   placeholder: string;
   onSave: (value: string) => void;
+  className?: string;
+  inputClassName?: string;
   style?: React.CSSProperties;
   inputStyle?: React.CSSProperties;
 }
 
-export function InlineEdit({ value, placeholder, onSave, style, inputStyle }: InlineEditProps) {
+export function InlineEdit({ value, placeholder, onSave, className, inputClassName, style, inputStyle }: InlineEditProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,7 +37,7 @@ export function InlineEdit({ value, placeholder, onSave, style, inputStyle }: In
     return (
       <input
         ref={inputRef}
-        className="input"
+        className={inputClassName ? `input ${inputClassName}` : 'input'}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={handleSave}
@@ -50,6 +52,7 @@ export function InlineEdit({ value, placeholder, onSave, style, inputStyle }: In
 
   return (
     <span
+      className={`${className ?? ''}${value ? '' : ' inline-edit-empty'}`.trim()}
       onClick={() => setEditing(true)}
       style={{
         cursor: 'pointer',
@@ -59,7 +62,7 @@ export function InlineEdit({ value, placeholder, onSave, style, inputStyle }: In
       }}
       title="Click to edit"
     >
-      {value || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{placeholder}</span>}
+      {value || <span>{placeholder}</span>}
     </span>
   );
 }
