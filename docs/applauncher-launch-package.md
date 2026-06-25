@@ -7,8 +7,8 @@ Photo Viewer owns its AppLauncher launch package. AppLauncher discovers the inst
 - App ID: `photo-viewer`
 - App kind: `containerApp`
 - Version source: `VERSION` and root `package.json`
-- Generated package path: `dist/applauncher-launch-packages/photo-viewer/1.0.3/`
-- Active install path: `~/Library/Application Support/AppLauncher/launch-packages/photo-viewer/1.0.3/`
+- Generated package path: `dist/applauncher-launch-packages/photo-viewer/1.0.4/`
+- Active install path: `~/Library/Application Support/AppLauncher/launch-packages/photo-viewer/1.0.4/`
 - Open URL: `http://127.0.0.1:4820/`
 - Health endpoint: `http://127.0.0.1:4820/api/health`
 
@@ -55,7 +55,7 @@ Required values:
 
 Defaulted non-secret values:
 
-- `IMAGE_TAG=1.0.3`
+- `IMAGE_TAG=1.0.4`
 - `PORT=4820`
 
 The package scripts pass the merged environment directly to Docker Compose. They do not print raw config values or secrets.

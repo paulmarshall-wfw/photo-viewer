@@ -74,6 +74,7 @@ function buildTimelineRows(photos: Photo[], columnCount: number): Row[] {
 export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeline = false }: ThumbnailGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [columnCount, setColumnCount] = useState(4);
+  const [scrollMargin, setScrollMargin] = useState(0);
 
   const updateColumns = useCallback(() => {
     const el = containerRef.current;
@@ -81,7 +82,16 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
     const width = el.clientWidth;
     const cols = Math.max(1, Math.floor((width + GAP) / (ITEM_MIN_WIDTH + GAP)));
     setColumnCount(cols);
-  }, []);
+
+    const parent = scrollContainerRef?.current;
+    if (parent) {
+      const parentRect = parent.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      setScrollMargin(elRect.top - parentRect.top + parent.scrollTop);
+    } else {
+      setScrollMargin(0);
+    }
+  }, [scrollContainerRef]);
 
   useEffect(() => {
     updateColumns();
@@ -104,6 +114,7 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
   const virtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => parentElement,
+    scrollMargin,
     estimateSize: (index) => {
       if (timeline) {
         const r = timelineRows[index];
@@ -149,7 +160,7 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
                     top: 0,
                     left: 0,
                     width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
+                    transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                     padding: isDecade ? '20px 0 8px' : '10px 0 6px',
                     fontFamily: 'var(--font-display)',
                     fontSize: isDecade ? 22 : 14,
@@ -173,7 +184,7 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
                   top: 0,
                   left: 0,
                   width: '100%',
-                  transform: `translateY(${virtualRow.start}px)`,
+                  transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                   display: 'grid',
                   gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
                   gap: GAP,
@@ -200,7 +211,7 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${virtualRow.start}px)`,
+                transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                 display: 'grid',
                 gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
                 gap: GAP,

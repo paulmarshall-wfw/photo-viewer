@@ -1,6 +1,6 @@
 {
   "name": "@photo-viewer/client",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@photo-viewer/shared": "1.0.3",
+    "@photo-viewer/shared": "1.0.4",
     "@tanstack/react-query": "^5.62.0",
     "@tanstack/react-virtual": "^3.11.0",
     "lucide-react": "^0.468.0",

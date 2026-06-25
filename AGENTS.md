@@ -19,7 +19,7 @@ python3 "/Users/paulmarshall/Software Development/All Standards/scripts/check-lo
 
 ## Runtime Notes
 
-- Photo Viewer AppLauncher package uses `photo-viewer` version `1.0.3` as a `containerApp`.
+- Photo Viewer AppLauncher package uses `photo-viewer` version `1.0.4` as a `containerApp`.
 - AppLauncher opens Photo Viewer at `http://127.0.0.1:4820/`; the package maps host port `4820` to the container's internal port `3000`.
-- AppLauncher package generation writes `dist/applauncher-launch-packages/photo-viewer/1.0.3/`; active installs live under `~/Library/Application Support/AppLauncher/launch-packages/photo-viewer/1.0.3/`.
+- AppLauncher package generation writes `dist/applauncher-launch-packages/photo-viewer/1.0.4/`; active installs live under `~/Library/Application Support/AppLauncher/launch-packages/photo-viewer/1.0.4/`.
 - App-specific launch values are owned by repo config files, especially `config/applauncher.env` and `deploy/.env`. AppLauncher must not inject Photo Viewer env vars.

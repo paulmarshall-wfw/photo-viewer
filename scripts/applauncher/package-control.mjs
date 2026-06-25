@@ -270,7 +270,7 @@ function buildChecks(root, config, envState, options = {}) {
     severity: tagOk ? 'info' : 'error',
     blocking: !tagOk,
     summary: tagOk ? 'Image tag is numbered.' : 'Image tag is not a numbered version.',
-    remediation: tagOk ? undefined : 'Set IMAGE_TAG to a numbered version such as 1.0.3.'
+    remediation: tagOk ? undefined : 'Set IMAGE_TAG to a numbered version such as 1.0.4.'
   });
 
   if (options.includeDocker !== false) {

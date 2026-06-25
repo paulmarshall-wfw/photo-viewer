@@ -35,6 +35,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error, refetch } = useFolderContents(folderPath, sort, order);
+  const visibleSubfolders = data?.subfolders.filter((folder) => folder.photoCount > 0) ?? [];
 
   const handlePhotoClick = useCallback((photo: Photo) => {
     if (data?.photos) {
@@ -227,17 +228,17 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             {!folderPath && <OnThisDayBanner />}
 
             {/* Subfolders */}
-            {data.subfolders.length > 0 && (
-              <section style={{ marginBottom: 24 }}>
+            {visibleSubfolders.length > 0 && (
+              <section style={{ marginBottom: data.photos.length > 0 ? 18 : 0 }}>
                 <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-display)' }}>
-                  Folders ({data.subfolders.length})
+                  Folders ({visibleSubfolders.length})
                 </h2>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
                   gap: 10,
                 }}>
-                  {data.subfolders.map((folder) => (
+                  {visibleSubfolders.map((folder) => (
                     <FolderCard key={folder.id} folder={folder} onClick={() => onNavigate(folder.path)} />
                   ))}
                 </div>
@@ -245,6 +246,15 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             )}
 
             {/* Photos */}
+            {visibleSubfolders.length > 0 && data.photos.length > 0 && (
+              <div
+                aria-hidden="true"
+                style={{
+                  borderTop: '1px solid var(--border-color)',
+                  margin: '0 0 18px',
+                }}
+              />
+            )}
             <section>
               {data.photos.length > 0 && (
                 <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-display)' }}>
@@ -259,7 +269,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
               />
             </section>
 
-            {data.subfolders.length === 0 && data.photos.length === 0 && (
+            {visibleSubfolders.length === 0 && data.photos.length === 0 && (
               <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
                 <p style={{ marginBottom: 12 }}>This folder is empty.</p>
                 <button className="btn btn-primary" onClick={handleIndex}>
