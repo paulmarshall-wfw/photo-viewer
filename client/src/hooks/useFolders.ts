@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { FolderContentsResponse, SortField, SortOrder } from '@photo-viewer/shared';
+import type { FolderContentsResponse, IndexRequest, SortField, SortOrder } from '@photo-viewer/shared';
+import { api } from '../api/client.js';
 
 const BASE = '/api';
 
@@ -32,14 +33,9 @@ export function useFolderContents(
 export function useTriggerIndex() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (folderPath?: string) => {
-      const res = await fetch(`${BASE}/index`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderPath }),
-      });
-      return res.json();
+    mutationFn: async (request?: string | IndexRequest) => {
+      const payload = typeof request === 'string' ? { folderPath: request } : request ?? {};
+      return api.triggerIndex(payload);
     },
     onSuccess: () => {
       // Refetch folder contents after indexing starts

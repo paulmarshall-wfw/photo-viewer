@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOnThisDay, useDismissOnThisDay } from '../../hooks/useOnThisDay.js';
+import { OrientedThumbnailImage } from '../photos/OrientedThumbnailImage.js';
 
 export function OnThisDayBanner() {
   const { data } = useOnThisDay();
@@ -58,13 +59,10 @@ export function OnThisDayBanner() {
             }}
           >
             <div style={{ width: '100%', paddingTop: '75%', position: 'relative', background: 'var(--bg-tertiary)' }}>
-              <img
-                src={`/api/photos/${p.id}/thumbnail`}
+              <OrientedThumbnailImage
+                photo={p}
                 alt={p.title || p.filename}
-                loading="lazy"
-                style={{
-                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover',
-                }}
+                style={{ position: 'absolute', inset: 0 }}
               />
             </div>
             <div style={{ padding: '6px 10px' }}>

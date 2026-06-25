@@ -136,11 +136,16 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
   const virtualRows = virtualizer.getVirtualItems();
 
   return (
-    <div ref={containerRef}>
+    <div
+      ref={containerRef}
+      style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'hidden' }}
+    >
       <div
         style={{
           height: virtualizer.getTotalSize(),
           width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
           position: 'relative',
         }}
       >
@@ -160,6 +165,8 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
                     top: 0,
                     left: 0,
                     width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
                     transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                     padding: isDecade ? '20px 0 8px' : '10px 0 6px',
                     fontFamily: 'var(--font-display)',
@@ -184,9 +191,11 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
                   top: 0,
                   left: 0,
                   width: '100%',
+                  maxWidth: '100%',
+                  minWidth: 0,
                   transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                   display: 'grid',
-                  gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                  gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
                   gap: GAP,
                   paddingBottom: GAP,
                 }}
@@ -211,9 +220,11 @@ export function ThumbnailGrid({ photos, onPhotoClick, scrollContainerRef, timeli
                 top: 0,
                 left: 0,
                 width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
                 transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                 display: 'grid',
-                gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
                 gap: GAP,
                 paddingBottom: GAP,
               }}

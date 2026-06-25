@@ -5,7 +5,8 @@ import type { FastifyInstance } from 'fastify';
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_DAYS } from '@photo-viewer/shared';
 import { config } from '../config.js';
 import { createAdminUser, createInvite, regenerateInvite, revokeUser, getAllUsers } from '../auth/service.js';
-import { isSetupComplete, setConfig, getPhotosPath, setPhotosPath } from './service.js';
+import { isSetupComplete, setConfig, getPhotosPath, setPhotosPath, clearLibraryDerivedState } from './service.js';
+import { isIndexing } from '../photos/indexer.js';
 
 const COOKIE_MAX_AGE = SESSION_MAX_AGE_DAYS * 24 * 60 * 60;
 
@@ -234,5 +235,19 @@ export async function adminRoutes(app: FastifyInstance) {
 
     setPhotosPath(photosPath);
     return { success: true, photosPath };
+  });
+
+  // Admin: clear indexed library state without touching original photo files.
+  app.post('/api/admin/index/clear', async (request, reply) => {
+    if (request.user?.role !== 'admin') {
+      return reply.code(403).send({ error: 'Admin access required' });
+    }
+
+    if (isIndexing()) {
+      return reply.code(409).send({ error: 'Indexing is currently running' });
+    }
+
+    clearLibraryDerivedState();
+    return { success: true };
   });
 }

@@ -7,6 +7,7 @@ import { useCurrentUser, useLogout } from '../hooks/useAuth.js';
 import { useTheme } from '../hooks/useTheme.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
 import { AlbumPickerButton } from '../components/albums/AlbumPickerButton.js';
+import { OrientedThumbnailImage } from '../components/photos/OrientedThumbnailImage.js';
 import { ViewerPage } from './ViewerPage.js';
 import clientPackage from '../../package.json';
 
@@ -137,11 +138,10 @@ function AlbumPhotoTile({
         }}
       >
         <div style={{ position: 'relative', paddingTop: '75%', background: 'var(--bg-tertiary)' }}>
-          <img
-            src={`/api/photos/${photo.id}/thumbnail?v=${encodeURIComponent(photo.fileModifiedAt)}`}
+          <OrientedThumbnailImage
+            photo={photo}
             alt={photo.title || photo.filename}
-            loading="lazy"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ position: 'absolute', inset: 0 }}
           />
         </div>
         <div style={{ padding: '8px 10px', minWidth: 0 }}>

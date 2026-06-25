@@ -64,15 +64,16 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
-  const handleIndex = () => {
+  const handleIndex = (includeSubfolders = false) => {
     setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
-    triggerIndex.mutate(folderPath || undefined, {
+    triggerIndex.mutate({ folderPath: folderPath || undefined, includeSubfolders }, {
       onSuccess: () => startPolling(),
+      onError: () => setIndexProgress(null),
     });
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', width: '100%', minWidth: 0, overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <header style={{
         padding: '10px 24px',
@@ -106,14 +107,33 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
         }}>
           {folderPath ? 'Gallery' : 'Library'}
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
+          className="browse-header-actions"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 1, minWidth: 0, overflowX: 'hidden' }}
+        >
           <div style={{ width: 200 }}>
             <SearchBar onSearch={onSearch} onClear={() => {}} isSearching={false} />
           </div>
-          <button className="btn btn-ghost" onClick={handleIndex} disabled={triggerIndex.isPending}
-            style={{ padding: '4px 8px', fontSize: 13 }}>
-            <RefreshCw size={14} className={triggerIndex.isPending ? 'spinning' : ''} /> Index
+          <button
+            className="btn btn-ghost"
+            onClick={() => handleIndex(false)}
+            disabled={triggerIndex.isPending}
+            title={folderPath ? 'Re-index files directly in this folder' : 'Re-index the full library'}
+            style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
+          >
+            <RefreshCw size={14} className={triggerIndex.isPending ? 'spinning' : ''} /> {folderPath ? 'Index Folder' : 'Index'}
           </button>
+          {folderPath && (
+            <button
+              className="btn btn-ghost"
+              onClick={() => handleIndex(true)}
+              disabled={triggerIndex.isPending}
+              title="Re-index this folder and all subfolders"
+              style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
+            >
+              <RefreshCw size={14} className={triggerIndex.isPending ? 'spinning' : ''} /> Folder + Subfolders
+            </button>
+          )}
           <select
             className="input"
             style={{ width: 'auto', padding: '4px 8px', fontSize: 13 }}
@@ -213,7 +233,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
       )}
 
       {/* Content */}
-      <div ref={scrollContainerRef} style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+      <div ref={scrollContainerRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', padding: 24 }}>
         {isLoading && (
           <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Loading...</div>
         )}
@@ -258,7 +278,7 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
                 }}
               />
             )}
-            <section>
+            <section style={{ minWidth: 0 }}>
               {data.photos.length > 0 && (
                 <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-display)' }}>
                   Photos ({data.totalPhotos})
@@ -275,9 +295,14 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             {visibleSubfolders.length === 0 && data.photos.length === 0 && (
               <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
                 <p style={{ marginBottom: 12 }}>This folder is empty.</p>
-                <button className="btn btn-primary" onClick={handleIndex}>
+                <button className="btn btn-primary" onClick={() => handleIndex(false)}>
                   <RefreshCw size={14} /> Run Indexer
                 </button>
+                {folderPath && (
+                  <button className="btn btn-ghost" onClick={() => handleIndex(true)} style={{ marginLeft: 8 }}>
+                    <RefreshCw size={14} /> Include Subfolders
+                  </button>
+                )}
               </div>
             )}
           </>

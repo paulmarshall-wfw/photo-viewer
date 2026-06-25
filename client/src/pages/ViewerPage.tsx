@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
+import type { QueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Download, BookOpen, Settings, Folder, RotateCcw, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo, Theme, User } from '@photo-viewer/shared';
@@ -27,6 +29,85 @@ interface ViewerPageProps {
   showInfo: boolean;
 }
 
+function updatePhotoArray(items: Photo[] | undefined, photoId: string, updates: Partial<Photo>) {
+  if (!items) return items;
+  let changed = false;
+  const next = items.map((item) => {
+    if (item.id !== photoId) return item;
+    changed = true;
+    return { ...item, ...updates };
+  });
+  return changed ? next : items;
+}
+
+function patchCachedPhotoData(data: unknown, photoId: string, updates: Partial<Photo>): unknown {
+  if (!data || typeof data !== 'object') return data;
+
+  const record = data as Record<string, any>;
+  let changed = false;
+  const next: Record<string, any> = { ...record };
+
+  if (record.photo?.id === photoId) {
+    next.photo = { ...record.photo, ...updates };
+    changed = true;
+  }
+
+  const photos = updatePhotoArray(record.photos, photoId, updates);
+  if (photos !== record.photos) {
+    next.photos = photos;
+    changed = true;
+  }
+
+  const results = updatePhotoArray(record.results, photoId, updates);
+  if (results !== record.results) {
+    next.results = results;
+    changed = true;
+  }
+
+  if (record.album && typeof record.album === 'object') {
+    const album = { ...record.album };
+    const albumPhotos = updatePhotoArray(album.photos, photoId, updates);
+    const explicitPhotos = updatePhotoArray(album.explicitPhotos, photoId, updates);
+    if (albumPhotos !== album.photos) {
+      album.photos = albumPhotos;
+      changed = true;
+    }
+    if (explicitPhotos !== album.explicitPhotos) {
+      album.explicitPhotos = explicitPhotos;
+      changed = true;
+    }
+    if (changed) next.album = album;
+  }
+
+  return changed ? next : data;
+}
+
+function updateCachedPhoto(queryClient: QueryClient, photoId: string, updates: Partial<Photo>) {
+  queryClient.setQueriesData(
+    {
+      predicate: (query) => {
+        const rootKey = query.queryKey[0];
+        return (
+          rootKey === 'folder-contents'
+          || rootKey === 'search'
+          || rootKey === 'album'
+          || rootKey === 'photo-detail'
+          || rootKey === 'on-this-day'
+        );
+      },
+    },
+    (data) => patchCachedPhotoData(data, photoId, updates),
+  );
+}
+
+function invalidatePhotoCaches(queryClient: QueryClient, photoId: string) {
+  queryClient.invalidateQueries({ queryKey: ['folder-contents'] });
+  queryClient.invalidateQueries({ queryKey: ['search'] });
+  queryClient.invalidateQueries({ queryKey: ['album'] });
+  queryClient.invalidateQueries({ queryKey: ['photo-detail', photoId] });
+  queryClient.invalidateQueries({ queryKey: ['on-this-day'] });
+}
+
 export function ViewerPage({
   photo,
   allPhotos,
@@ -39,6 +120,7 @@ export function ViewerPage({
   showInfo,
 }: ViewerPageProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { theme: currentTheme, toggleTheme } = useTheme();
   const { showError } = useToast();
   const logout = useLogout();
@@ -47,6 +129,9 @@ export function ViewerPage({
   const [slideshowLoop, setSlideshowLoop] = useState(true);
   const [localPhoto, setLocalPhoto] = useState(photo);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const orientationSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingOrientationSaveRef = useRef<Promise<void> | null>(null);
+  const orientationSaveSeqRef = useRef(0);
 
   // Sync local photo state with prop
   useEffect(() => {
@@ -73,7 +158,16 @@ export function ViewerPage({
 
   useHotkeys('right', goNext, [goNext]);
   useHotkeys('left', goPrev, [goPrev]);
-  useHotkeys('escape', onBack, [onBack]);
+  const handleBack = useCallback(() => {
+    const pendingSave = pendingOrientationSaveRef.current;
+    if (!pendingSave) {
+      onBack();
+      return;
+    }
+    pendingSave.finally(onBack);
+  }, [onBack]);
+
+  useHotkeys('escape', handleBack, [handleBack]);
   useHotkeys('i', onToggleInfo, [onToggleInfo]);
 
   useEffect(() => {
@@ -90,29 +184,56 @@ export function ViewerPage({
     link.click();
   };
 
+  const applyPhotoUpdate = useCallback((photoId: string, updates: Partial<Photo>) => {
+    setLocalPhoto((prev) => prev.id === photoId ? { ...prev, ...updates } : prev);
+    onPhotoUpdate(photoId, updates);
+    updateCachedPhoto(queryClient, photoId, updates);
+  }, [onPhotoUpdate, queryClient]);
+
   const handlePhotoUpdate = useCallback((updates: Partial<Photo>) => {
-    setLocalPhoto((prev) => ({ ...prev, ...updates }));
-    onPhotoUpdate(localPhoto.id, updates);
-  }, [localPhoto.id, onPhotoUpdate]);
+    applyPhotoUpdate(localPhoto.id, updates);
+  }, [applyPhotoUpdate, localPhoto.id]);
 
   const handleRotate = useCallback(async (delta: 90 | -90) => {
+    const photoId = localPhoto.id;
     const previousOrientation = localPhoto.orientationDeg ?? 0;
     const orientationDeg = ((previousOrientation + delta + 360) % 360) as Photo['orientationDeg'];
-    handlePhotoUpdate({ orientationDeg });
+    const saveSeq = orientationSaveSeqRef.current + 1;
+    orientationSaveSeqRef.current = saveSeq;
+    applyPhotoUpdate(photoId, { orientationDeg });
 
-    try {
-      const res = await fetch(`/api/photos/${localPhoto.id}/orientation`, {
+    const savePromise = orientationSaveChainRef.current.catch(() => undefined).then(async () => {
+      const res = await fetch(`/api/photos/${photoId}/orientation`, {
         method: 'PATCH',
         credentials: 'include',
+        keepalive: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orientationDeg }),
       });
       if (!res.ok) throw new Error('Request failed');
+      invalidatePhotoCaches(queryClient, photoId);
+    });
+
+    const trackedPromise = savePromise.catch(() => {
+      if (orientationSaveSeqRef.current === saveSeq) {
+        applyPhotoUpdate(photoId, { orientationDeg: previousOrientation });
+        showError('Failed to save image orientation');
+      }
+    }).finally(() => {
+      if (pendingOrientationSaveRef.current === trackedPromise) {
+        pendingOrientationSaveRef.current = null;
+      }
+    });
+
+    orientationSaveChainRef.current = trackedPromise;
+    pendingOrientationSaveRef.current = trackedPromise;
+
+    try {
+      await trackedPromise;
     } catch {
-      handlePhotoUpdate({ orientationDeg: previousOrientation });
-      showError('Failed to save image orientation');
+      // Save errors are handled in the tracked promise so exit can still await it safely.
     }
-  }, [handlePhotoUpdate, localPhoto.id, localPhoto.orientationDeg, showError]);
+  }, [applyPhotoUpdate, localPhoto.id, localPhoto.orientationDeg, queryClient, showError]);
 
 
   return (
@@ -133,7 +254,7 @@ export function ViewerPage({
             position: 'relative',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-              <button className="btn btn-ghost" onClick={onBack} style={{ padding: '4px 8px' }}>
+              <button className="btn btn-ghost" onClick={handleBack} style={{ padding: '4px 8px' }}>
                 <ArrowLeft size={16} /> Gallery
               </button>
               <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>

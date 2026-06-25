@@ -82,6 +82,24 @@ export interface FolderContentsQuery {
   personTag?: string;
 }
 
+export interface IndexRequest {
+  folderPath?: string;
+  includeSubfolders?: boolean;
+}
+
+export interface IndexResponse {
+  status: 'started' | 'already_running';
+  progress: {
+    phase: 'scanning' | 'indexing' | 'previews' | 'complete';
+    scannedFolders: number;
+    scannedFiles: number;
+    indexedFiles: number;
+    totalFiles: number;
+    previewsTotal: number;
+    previewsDone: number;
+  };
+}
+
 export interface PhotoDetailResponse {
   photo: Photo;
   story: StoryEntry[];

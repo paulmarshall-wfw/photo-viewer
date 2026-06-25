@@ -15,6 +15,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -131,6 +132,13 @@ input, textarea, select {
 .folder-card-button:hover,
 .folder-card-button:focus-visible {
   background: var(--bg-tertiary) !important;
+}
+
+.album-card-shell,
+.photo-card-button,
+.folder-card-button {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .albums-workspace {

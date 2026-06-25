@@ -7,6 +7,8 @@ import type {
   InviteUserResponse,
   AdminConfigResponse,
   UpdateConfigRequest,
+  IndexRequest,
+  IndexResponse,
   AlbumsResponse,
   AlbumDetailResponse,
   CreateAlbumRequest,
@@ -83,6 +85,12 @@ export const api = {
 
   updateConfig: (data: UpdateConfigRequest) =>
     request<{ success: boolean; photosPath: string }>('/admin/config', { method: 'PUT', body: JSON.stringify(data) }),
+
+  clearIndex: () =>
+    request<{ success: boolean }>('/admin/index/clear', { method: 'POST', body: '{}' }),
+
+  triggerIndex: (data: IndexRequest) =>
+    request<IndexResponse>('/index', { method: 'POST', body: JSON.stringify(data) }),
 
   // Albums
   getAlbums: () => request<AlbumsResponse>('/albums'),

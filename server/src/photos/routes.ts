@@ -3,22 +3,30 @@ import type { SortField, SortOrder } from '@photo-viewer/shared';
 import { DEFAULT_PAGE_SIZE } from '@photo-viewer/shared';
 import path from 'node:path';
 import { getFolderByPath, getSubfolders, getPhotosInFolder, getPhotoById, getBreadcrumbs } from './service.js';
-import { runIndex, getIndexProgress, isIndexing } from './indexer.js';
+import { runIndex, getIndexProgress, isIndexing, validateIndexTarget } from './indexer.js';
 import { readStory } from '../metadata/story.js';
 import { getPhotosPath } from '../admin/service.js';
 import { getGlobalStats, getFolderStats } from './stats.js';
 
 export async function photoRoutes(app: FastifyInstance) {
   // Trigger indexing
-  app.post<{ Body: { folderPath?: string } }>('/api/index', async (request, reply) => {
+  app.post<{ Body: { folderPath?: string; includeSubfolders?: boolean } }>('/api/index', async (request, reply) => {
     if (isIndexing()) {
       return { status: 'already_running', progress: getIndexProgress() };
     }
 
     const folderPath = request.body?.folderPath;
+    const includeSubfolders = request.body?.includeSubfolders === true;
+
+    try {
+      validateIndexTarget(folderPath || undefined);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Invalid index target';
+      return reply.code(400).send({ error: message });
+    }
 
     // Run in background
-    runIndex(folderPath || undefined).catch(err => {
+    runIndex(folderPath || undefined, { includeSubfolders }).catch(err => {
       request.log.error(err, 'Indexing failed');
     });
 

@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import type { Photo } from '@photo-viewer/shared';
+import { OrientedThumbnailImage } from './OrientedThumbnailImage.js';
 
 interface ThumbnailStripProps {
   photos: Photo[];
@@ -53,12 +54,7 @@ export function ThumbnailStrip({ photos, currentPhotoId, onSelect }: ThumbnailSt
             onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.opacity = '1'; }}
             onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.opacity = '0.7'; }}
           >
-            <img
-              src={`/api/photos/${photo.id}/thumbnail?v=${encodeURIComponent(photo.fileModifiedAt)}`}
-              alt={photo.filename}
-              loading="lazy"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
+            <OrientedThumbnailImage photo={photo} alt={photo.filename} />
           </button>
         );
       })}

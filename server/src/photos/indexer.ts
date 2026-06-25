@@ -22,6 +22,10 @@ export interface IndexProgress {
   previewsDone: number;
 }
 
+export interface RunIndexOptions {
+  includeSubfolders?: boolean;
+}
+
 let indexing = false;
 let progress: IndexProgress = {
   phase: 'complete',
@@ -41,7 +45,29 @@ export function isIndexing(): boolean {
   return indexing;
 }
 
-export async function runIndex(folderRelativePath?: string): Promise<void> {
+export function validateIndexTarget(folderRelativePath?: string): string | undefined {
+  const photosPath = getPhotosPath();
+  if (!photosPath || !fs.existsSync(photosPath)) {
+    throw new Error('Photos path not configured or does not exist');
+  }
+
+  const rootPath = path.resolve(photosPath);
+  const scanRoot = folderRelativePath
+    ? path.resolve(rootPath, folderRelativePath)
+    : rootPath;
+
+  if (scanRoot !== rootPath && !scanRoot.startsWith(`${rootPath}${path.sep}`)) {
+    throw new Error('Folder must be inside the configured photo library');
+  }
+
+  if (!fs.existsSync(scanRoot)) {
+    throw new Error('Folder does not exist');
+  }
+
+  return folderRelativePath ? path.relative(rootPath, scanRoot) : undefined;
+}
+
+export async function runIndex(folderRelativePath?: string, options: RunIndexOptions = {}): Promise<void> {
   if (indexing) return;
 
   const photosPath = getPhotosPath();
@@ -54,18 +80,17 @@ export async function runIndex(folderRelativePath?: string): Promise<void> {
 
   try {
     // Determine scan root: specific folder or entire collection
+    const rootPath = path.resolve(photosPath);
     const scanRoot = folderRelativePath
-      ? path.join(photosPath, folderRelativePath)
-      : photosPath;
+      ? path.resolve(rootPath, folderRelativePath)
+      : rootPath;
+    const normalizedFolderRelativePath = validateIndexTarget(folderRelativePath);
 
-    if (!fs.existsSync(scanRoot)) {
-      throw new Error('Folder does not exist');
-    }
-
-    // Phase 1: Scan filesystem (only the target folder, not recursive for single-folder mode)
-    const entries = folderRelativePath
-      ? await scanSingleFolder(photosPath, scanRoot)
-      : await scanDirectory(photosPath, photosPath);
+    // Phase 1: Scan filesystem. Folder indexing is shallow unless requested as a subtree.
+    if (normalizedFolderRelativePath) progress.scannedFolders = 1;
+    const entries = normalizedFolderRelativePath && !options.includeSubfolders
+      ? await scanSingleFolder(rootPath, scanRoot)
+      : await scanDirectory(rootPath, scanRoot);
 
     progress.totalFiles = entries.files.length;
     progress.phase = 'indexing';
@@ -73,11 +98,31 @@ export async function runIndex(folderRelativePath?: string): Promise<void> {
     const db = getDb();
     const now = new Date().toISOString();
 
-    if (!folderRelativePath) {
+    if (!normalizedFolderRelativePath) {
       // Full index: upsert root folder
       db.insert(folders)
         .values({ id: nanoid(), path: '', name: path.basename(photosPath), parentPath: null, photoCount: 0, indexedAt: now })
         .onConflictDoUpdate({ target: folders.path, set: { name: path.basename(photosPath), indexedAt: now } })
+        .run();
+    } else {
+      const parentPath = path.dirname(normalizedFolderRelativePath);
+      db.insert(folders)
+        .values({
+          id: nanoid(),
+          path: normalizedFolderRelativePath,
+          name: path.basename(scanRoot),
+          parentPath: parentPath === '.' ? null : parentPath,
+          photoCount: 0,
+          indexedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: folders.path,
+          set: {
+            name: path.basename(scanRoot),
+            parentPath: parentPath === '.' ? null : parentPath,
+            indexedAt: now,
+          },
+        })
         .run();
     }
 
@@ -138,25 +183,31 @@ export async function runIndex(folderRelativePath?: string): Promise<void> {
       progress.indexedFiles++;
     }
 
-    // Update folder photo counts and first photo
-    updateFolderStats();
-
-    // Rebuild FTS5 index
-    rebuildFtsIndex();
-
     // Clean up deleted files (only for full index)
-    if (!folderRelativePath) {
+    if (!normalizedFolderRelativePath) {
       cleanupDeleted(entries.files.map(f => f.relativePath), entries.folders.map(f => f.relativePath));
+    } else if (options.includeSubfolders) {
+      cleanupDeletedInFolderTree(
+        normalizedFolderRelativePath,
+        entries.files.map(f => f.relativePath),
+        entries.folders.map(f => f.relativePath),
+      );
     } else {
       // For single-folder index, only clean up files in that folder
-      cleanupDeletedInFolder(folderRelativePath, entries.files.map(f => f.relativePath));
+      cleanupDeletedInFolder(normalizedFolderRelativePath, entries.files.map(f => f.relativePath));
     }
 
+    // Update derived data after cleanup so counts and search do not keep deleted rows.
+    updateFolderStats();
+    rebuildFtsIndex();
+
     // Generate previews for PSD/PSB files that don't have one yet
+    const indexedFileSet = new Set(entries.files.map(f => f.relativePath));
     const psdPhotos = db.select({ id: photos.id, filePath: photos.filePath, filename: photos.filename })
       .from(photos)
       .where(eq(photos.format, 'psd'))
       .all()
+      .filter(p => !normalizedFolderRelativePath || indexedFileSet.has(p.filePath))
       .filter(p => !hasCachedPreview(p.id) || !hasCachedThumbnail(p.id));
 
     if (psdPhotos.length > 0) {
@@ -330,7 +381,34 @@ function cleanupDeletedInFolder(folderPath: string, currentFiles: string[]) {
 
   for (const photo of folderPhotos) {
     if (!currentFileSet.has(photo.filePath)) {
-      db.delete(photos).where(eq(photos.id, photo.id)).run();
+      deletePhotoIndexRow(photo.id);
+    }
+  }
+}
+
+function cleanupDeletedInFolderTree(folderPath: string, currentFiles: string[], currentFolders: string[]) {
+  const db = getDb();
+  const scopedPhotos = db.select({ id: photos.id, filePath: photos.filePath, folderPath: photos.folderPath })
+    .from(photos)
+    .all()
+    .filter(photo => isSameFolderOrDescendant(photo.folderPath, folderPath));
+  const currentFileSet = new Set(currentFiles);
+
+  for (const photo of scopedPhotos) {
+    if (!currentFileSet.has(photo.filePath)) {
+      deletePhotoIndexRow(photo.id);
+    }
+  }
+
+  const currentFolderSet = new Set([folderPath, ...currentFolders]);
+  const scopedFolders = db.select({ id: folders.id, path: folders.path })
+    .from(folders)
+    .all()
+    .filter(folder => isSameFolderOrDescendant(folder.path, folderPath));
+
+  for (const folder of scopedFolders) {
+    if (!currentFolderSet.has(folder.path)) {
+      deleteFolderIndexRow(folder.path);
     }
   }
 }
@@ -342,7 +420,7 @@ function cleanupDeleted(currentFiles: string[], currentFolders: string[]) {
 
   for (const photo of allPhotos) {
     if (!currentFileSet.has(photo.filePath)) {
-      db.delete(photos).where(eq(photos.id, photo.id)).run();
+      deletePhotoIndexRow(photo.id);
     }
   }
 
@@ -351,7 +429,29 @@ function cleanupDeleted(currentFiles: string[], currentFolders: string[]) {
 
   for (const folder of allFolders) {
     if (!currentFolderSet.has(folder.path)) {
-      db.delete(folders).where(eq(folders.id, folder.id)).run();
+      deleteFolderIndexRow(folder.path);
     }
   }
+}
+
+function isSameFolderOrDescendant(candidatePath: string, folderPath: string): boolean {
+  return candidatePath === folderPath || candidatePath.startsWith(`${folderPath}/`);
+}
+
+function deletePhotoIndexRow(photoId: string) {
+  const sqlite = getSqlite();
+  sqlite.prepare(`DELETE FROM photo_people_tags WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM reactions WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM comments WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM photo_follows WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM notifications WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM album_photos WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM album_photo_exclusions WHERE photo_id = ?`).run(photoId);
+  sqlite.prepare(`DELETE FROM photos WHERE id = ?`).run(photoId);
+}
+
+function deleteFolderIndexRow(folderPath: string) {
+  const sqlite = getSqlite();
+  sqlite.prepare(`DELETE FROM album_folders WHERE folder_path = ?`).run(folderPath);
+  sqlite.prepare(`DELETE FROM folders WHERE path = ?`).run(folderPath);
 }

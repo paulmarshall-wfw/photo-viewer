@@ -1,6 +1,7 @@
 import { Heart, MessageCircle } from 'lucide-react';
 import type { Photo } from '@photo-viewer/shared';
 import { AlbumPickerButton } from '../albums/AlbumPickerButton.js';
+import { OrientedThumbnailImage } from './OrientedThumbnailImage.js';
 
 interface PhotoCardProps {
   photo: Photo;
@@ -42,19 +43,10 @@ export function PhotoCard({ photo, onClick }: PhotoCardProps) {
         borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
         overflow: 'hidden',
       }}>
-        <img
-          src={`/api/photos/${photo.id}/thumbnail?v=${encodeURIComponent(photo.fileModifiedAt)}`}
+        <OrientedThumbnailImage
+          photo={photo}
           alt={photo.title || photo.filename}
-          loading="lazy"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            boxShadow: 'var(--image-glow)',
-          }}
+          style={{ position: 'absolute', inset: 0 }}
         />
       </div>
       <div style={{ padding: '8px 10px', minHeight: 40, borderRadius: '0 0 var(--radius-lg) var(--radius-lg)', overflow: 'hidden', background: 'var(--bg-secondary)', width: '100%' }}>

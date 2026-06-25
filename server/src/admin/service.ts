@@ -44,16 +44,20 @@ export function setPhotosPath(photosPath: string): void {
 /**
  * Wipe everything that was derived from the *previous* photo library:
  *   - photos and folders
- *   - photos_fts (contentless FTS5 — uses the special 'delete-all' command)
+ *   - photos_fts
  *   - all photo-keyed social tables (reactions, comments, people-tag links,
  *     photo follows, notifications, on-this-day dismissals)
+ *   - album folder/photo membership rows that reference indexed folders/photos
  *   - on-disk preview + thumbnail caches
  *
- * Preserves: users, people_tag definitions, activity history.
+ * Preserves: users, people_tag definitions, album shells, activity history.
  */
-function clearLibraryDerivedState(): void {
+export function clearLibraryDerivedState(): void {
   const sqlite = getSqlite();
   sqlite.exec(`
+    DELETE FROM album_photo_exclusions;
+    DELETE FROM album_photos;
+    DELETE FROM album_folders;
     DELETE FROM photo_people_tags;
     DELETE FROM reactions;
     DELETE FROM comments;
@@ -62,7 +66,12 @@ function clearLibraryDerivedState(): void {
     DELETE FROM dismissed_on_this_day;
     DELETE FROM photos;
     DELETE FROM folders;
-    INSERT INTO photos_fts(photos_fts) VALUES('delete-all');
+    DROP TABLE IF EXISTS photos_fts;
+    CREATE VIRTUAL TABLE photos_fts USING fts5(
+      title, caption, story_text, folder_name, filename,
+      content='',
+      content_rowid='rowid'
+    );
   `);
 
   // Wipe on-disk caches; ignore failures (best-effort cleanup).

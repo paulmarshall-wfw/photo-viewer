@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client.js';
 import { useCurrentUser, useSetupStatus } from '../hooks/useAuth.js';
-import { UserPlus, Trash2, RefreshCw, Copy, Settings, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Database, UserPlus, Trash2, RefreshCw, Copy, Settings, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPicker } from '../components/shared/FolderPicker.js';
 import { ThemeToggle } from '../components/shared/ThemeToggle.js';
@@ -67,6 +67,18 @@ export function AdminPage() {
     mutationFn: api.updateConfig,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-config'] }),
   });
+
+  const clearIndexMutation = useMutation({
+    mutationFn: api.clearIndex,
+    onSuccess: () => queryClient.invalidateQueries(),
+  });
+
+  const clearIndex = () => {
+    const confirmed = confirm(
+      'Clear the photo index? This removes indexed folders, photo records, search data, cached previews, album contents, and photo-linked annotations. Original photo files will not be changed.'
+    );
+    if (confirmed) clearIndexMutation.mutate();
+  };
 
   const copyLink = async (link: string) => {
     await navigator.clipboard.writeText(link);
@@ -199,7 +211,7 @@ export function AdminPage() {
       </section>
 
       {/* Storage Config */}
-      <section className="card">
+      <section className="card" style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}>
           <Settings size={18} /> Storage Location
         </h2>
@@ -236,6 +248,39 @@ export function AdminPage() {
               </p>
             )}
           </>
+        )}
+      </section>
+
+      {/* Index Admin */}
+      <section className="card">
+        <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' }}>
+          <Database size={18} /> Index
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 8 }}>
+              Clear indexed folders, photo records, search data, generated previews, album contents, and photo-linked annotations.
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+              Original photo files stay in place. Run the indexer again after clearing.
+            </p>
+          </div>
+          <button
+            className="btn btn-danger"
+            onClick={clearIndex}
+            disabled={clearIndexMutation.isPending}
+            style={{ flexShrink: 0, padding: '8px 12px', fontSize: 13 }}
+          >
+            <AlertTriangle size={14} /> Clear Index
+          </button>
+        </div>
+        {clearIndexMutation.isSuccess && (
+          <p style={{ color: 'var(--success)', fontSize: 14, marginTop: 12 }}>Index cleared.</p>
+        )}
+        {clearIndexMutation.error && (
+          <p style={{ color: 'var(--danger)', fontSize: 14, marginTop: 12 }}>
+            {clearIndexMutation.error instanceof Error ? clearIndexMutation.error.message : 'Failed to clear index'}
+          </p>
         )}
       </section>
     </div>
