@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Photo } from '@photo-viewer/shared';
 import { useSetupStatus, useCurrentUser, useLogin } from './hooks/useAuth.js';
@@ -83,6 +83,26 @@ function MainApp() {
     setView('browse');
   }, []);
 
+  const getParentFolderPath = useCallback((path: string) => {
+    const parts = path.split('/').filter(Boolean);
+    return parts.slice(0, -1).join('/');
+  }, []);
+
+  const handleHome = useCallback(() => {
+    setFolderPath((currentPath) => getParentFolderPath(currentPath));
+    setViewerState(null);
+    setView('browse');
+  }, [getParentFolderPath]);
+
+  const handleViewerHome = useCallback(() => {
+    const parentFolderPath = viewerState?.photo.folderPath
+      ? getParentFolderPath(viewerState.photo.folderPath)
+      : '';
+    setFolderPath(parentFolderPath);
+    setViewerState(null);
+    setView('browse');
+  }, [getParentFolderPath, viewerState?.photo.folderPath]);
+
   if (view === 'viewer' && viewerState) {
     return (
       <ViewerPage
@@ -95,6 +115,7 @@ function MainApp() {
         onPhotoUpdate={handleViewerPhotoUpdate}
         onToggleInfo={() => setShowInfo((visible) => !visible)}
         showInfo={showInfo}
+        onHome={handleViewerHome}
       />
     );
   }
@@ -104,13 +125,15 @@ function MainApp() {
       <SearchPage
         initialQuery={searchQuery}
         onBack={handleSearchBack}
+        onHome={handleHome}
+        onSearch={handleSearch}
         onPhotoSelect={handlePhotoSelect}
       />
     );
   }
 
   if (view === 'activity') {
-    return <ActivityPage onBack={() => setView('browse')} />;
+    return <ActivityPage onBack={() => setView('browse')} onHome={handleHome} />;
   }
 
   return (
@@ -119,6 +142,7 @@ function MainApp() {
       onNavigate={handleNavigate}
       onPhotoSelect={handlePhotoSelect}
       onSearch={handleSearch}
+      onHome={handleHome}
       onShowActivity={() => setView('activity')}
     />
   );
@@ -173,6 +197,11 @@ function EmailLoginPage() {
   );
 }
 
+function ActivityRoutePage() {
+  const navigate = useNavigate();
+  return <ActivityPage onBack={() => navigate('/')} onHome={() => navigate('/')} />;
+}
+
 function AppRoutes() {
   const setupStatus = useSetupStatus();
   const currentUser = useCurrentUser();
@@ -202,6 +231,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/admin" element={<AdminPage />} />
       <Route path="/readme" element={<ReadmePage />} />
+      <Route path="/activity" element={<ActivityRoutePage />} />
       <Route path="/albums" element={<AlbumsPage />} />
       <Route path="/albums/:albumId" element={<AlbumsPage />} />
       <Route path="/invite/:token" element={<Navigate to="/" replace />} />

@@ -1,23 +1,22 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Search } from 'lucide-react';
 import type { Photo } from '@photo-viewer/shared';
+import { AppChrome } from '../components/layout/AppChrome.js';
 import { FilterPanel } from '../components/search/FilterPanel.js';
 import { ThumbnailGrid } from '../components/photos/ThumbnailGrid.js';
-import { ThemeToggle } from '../components/shared/ThemeToggle.js';
-import { useTheme } from '../hooks/useTheme.js';
 
 interface SearchPageProps {
   initialQuery: string;
   onBack: () => void;
+  onHome: () => void;
+  onSearch: (query: string) => void;
   onPhotoSelect: (photo: Photo, allPhotos: Photo[]) => void;
 }
 
-export function SearchPage({ initialQuery, onBack, onPhotoSelect }: SearchPageProps) {
-  const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
-  const [query] = useState(initialQuery);
+export function SearchPage({ initialQuery, onBack, onHome, onSearch, onPhotoSelect }: SearchPageProps) {
+  const [query, setQuery] = useState(initialQuery);
+  const [draftQuery, setDraftQuery] = useState(initialQuery);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [needsTitle, setNeedsTitle] = useState(false);
@@ -46,38 +45,38 @@ export function SearchPage({ initialQuery, onBack, onPhotoSelect }: SearchPagePr
     onPhotoSelect(photo, allPhotos);
   }, [searchQuery.data, onPhotoSelect]);
 
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const nextQuery = draftQuery.trim();
+    if (!nextQuery) return;
+    setQuery(nextQuery);
+    onSearch(nextQuery);
+  };
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        padding: '10px 24px',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid var(--glass-border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        flexShrink: 0,
-      }}>
+      <AppChrome onHome={onHome} />
+
+      <div className="search-taskbar">
         <button className="btn btn-ghost" onClick={onBack} style={{ padding: '4px 8px' }}>
           <ArrowLeft size={16} /> Back
         </button>
-        <h1 style={{ fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
-          Search
-        </h1>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <BookOpen size={14} /> Read Me
-        </button>
-        <span style={{ fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
-          "{query}"
+        <form className="search-taskbar-form" onSubmit={handleSearchSubmit}>
+          <Search size={14} className="search-taskbar-icon" />
+          <input
+            className="input"
+            value={draftQuery}
+            onChange={(event) => setDraftQuery(event.target.value)}
+            placeholder="Search photos..."
+            style={{ height: 34, paddingLeft: 30, fontSize: 13 }}
+          />
+        </form>
+        <span className="search-result-count">
           {searchQuery.data && (
-            <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: 14, marginLeft: 8 }}>
-              ({searchQuery.data.total} result{searchQuery.data.total !== 1 ? 's' : ''})
-            </span>
+            `${searchQuery.data.total} result${searchQuery.data.total !== 1 ? 's' : ''}`
           )}
         </span>
-      </header>
+      </div>
 
       <div style={{ padding: '0 24px' }}>
         <FilterPanel

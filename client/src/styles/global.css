@@ -141,6 +141,177 @@ input, textarea, select {
   max-width: 100%;
 }
 
+.app-chrome {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 48px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.app-chrome-identity,
+.app-chrome-nav,
+.app-chrome-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.app-chrome-identity {
+  justify-self: start;
+}
+
+.app-chrome-actions {
+  justify-self: end;
+  justify-content: flex-end;
+}
+
+.app-chrome-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.app-chrome-version {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.app-chrome-nav {
+  justify-self: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.app-chrome-nav-button {
+  min-height: 32px;
+  padding: 5px 11px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.app-chrome-nav-button-active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-tertiary));
+  color: var(--text-primary);
+}
+
+.app-chrome-nav .notification-bell-button {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+}
+
+.app-chrome-nav .notification-bell-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.app-chrome-icon-button {
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+}
+
+.app-chrome-actions .username-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.app-chrome-home {
+  justify-self: center;
+  padding: 5px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.browse-taskbar,
+.search-taskbar,
+.screen-taskbar {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--glass-border);
+  background: color-mix(in srgb, var(--bg-primary) 92%, var(--bg-elevated));
+}
+
+.browse-taskbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 520px) minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+}
+
+.browse-taskbar-breadcrumbs {
+  min-width: 0;
+}
+
+.browse-taskbar-search {
+  min-width: 0;
+}
+
+.browse-taskbar-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.index-action-select {
+  width: 164px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.search-taskbar,
+.screen-taskbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+}
+
+.search-taskbar-form {
+  position: relative;
+  width: min(520px, 52vw);
+  margin: 0 auto;
+}
+
+.search-taskbar-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  z-index: 1;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+}
+
+.search-result-count {
+  min-width: 92px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: right;
+}
+
+.screen-taskbar-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .albums-workspace {
   flex: 1;
   min-height: 0;
@@ -273,15 +444,45 @@ input, textarea, select {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
 }
 
+.viewer-toolbar-row {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 8px;
+}
+
+.viewer-context-toolbar,
 .viewer-action-toolbar {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--glass-border));
   border-radius: 8px;
+}
+
+.viewer-context-toolbar {
+  justify-self: start;
+  justify-content: flex-start;
+  min-width: 0;
+  max-width: min(100%, 620px);
+  border: 1px solid color-mix(in srgb, var(--text-primary) 14%, var(--glass-border));
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--text-primary) 6%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 6px 20px rgba(0, 0, 0, 0.14);
+}
+
+.viewer-action-toolbar {
+  justify-self: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--glass-border));
   background: color-mix(in srgb, var(--bg-elevated) 88%, var(--accent) 12%);
   box-shadow: 0 0 0 1px var(--accent-glow), 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+
+.viewer-toolbar-spacer {
+  min-width: 0;
 }
 
 .viewer-icon-button {
@@ -316,6 +517,98 @@ input, textarea, select {
 
 .viewer-album-action {
   z-index: 20;
+}
+
+.viewer-gallery-button {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-elevated));
+  color: var(--text-primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.viewer-folder-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(36vw, 520px);
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--text-primary) 18%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-primary) 74%, var(--bg-elevated) 26%);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 650;
+  min-width: 0;
+}
+
+.viewer-folder-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-count-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settings-index-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-app-actions {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.settings-app-actions > div {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-action-button {
+  min-width: 132px;
+  justify-content: center;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-index-progress {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-elevated) 84%, var(--accent) 6%);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.settings-index-progress-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--bg-tertiary);
+}
+
+.settings-index-progress-bar > div {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.3s ease;
 }
 
 .photo-reaction-row {
@@ -596,6 +889,55 @@ input, textarea, select {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .app-chrome {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "identity actions"
+      "nav nav";
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+
+  .app-chrome-identity {
+    grid-area: identity;
+  }
+
+  .app-chrome-nav {
+    grid-area: nav;
+    justify-self: stretch;
+    justify-content: center;
+  }
+
+  .app-chrome-actions {
+    grid-area: actions;
+  }
+
+  .browse-taskbar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .browse-taskbar-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .search-taskbar {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  .search-taskbar-form {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+
+  .search-result-count {
+    margin-left: auto;
+  }
+
   .albums-workspace {
     grid-template-columns: 1fr;
     overflow: auto;
@@ -638,12 +980,52 @@ input, textarea, select {
     display: none;
   }
 
+  .app-chrome-actions .username-label {
+    display: none;
+  }
+
+  .viewer-toolbar-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .viewer-context-toolbar,
+  .viewer-action-toolbar {
+    width: min(100%, 680px);
+  }
+
+  .viewer-context-toolbar {
+    justify-self: start;
+    justify-content: flex-start;
+  }
+
+  .viewer-action-toolbar {
+    justify-self: center;
+    justify-content: center;
+  }
+
+  .viewer-folder-label {
+    max-width: min(72vw, 520px);
+  }
+
   .info-panel {
     width: min(380px, 42vw);
   }
 }
 
 @media (max-width: 480px) {
+  .app-chrome-name {
+    font-size: 15px;
+  }
+
+  .app-chrome-version {
+    font-size: 11px;
+  }
+
+  .app-chrome-actions {
+    gap: 4px;
+  }
+
   .browse-header-actions .search-container {
     width: 80px !important;
   }

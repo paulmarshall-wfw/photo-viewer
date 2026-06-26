@@ -89,6 +89,9 @@ export const api = {
   clearIndex: () =>
     request<{ success: boolean }>('/admin/index/clear', { method: 'POST', body: '{}' }),
 
+  clearAndReindex: () =>
+    request<IndexResponse>('/admin/index/clear-and-reindex', { method: 'POST', body: '{}' }),
+
   triggerIndex: (data: IndexRequest) =>
     request<IndexResponse>('/index', { method: 'POST', body: JSON.stringify(data) }),
 

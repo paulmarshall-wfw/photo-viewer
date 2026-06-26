@@ -1,18 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Settings, Activity, BookOpen, Images, AlertTriangle } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
 import type { Photo, SortField, SortOrder } from '@photo-viewer/shared';
-import { useCurrentUser, useLogout } from '../hooks/useAuth.js';
-import { useFolderContents, useTriggerIndex } from '../hooks/useFolders.js';
-import { useTheme } from '../hooks/useTheme.js';
-import { api } from '../api/client.js';
+import { useFolderContents } from '../hooks/useFolders.js';
+import { AppChrome } from '../components/layout/AppChrome.js';
 import { Breadcrumbs } from '../components/layout/Breadcrumbs.js';
 import { FolderCard } from '../components/photos/FolderCard.js';
 import { ThumbnailGrid } from '../components/photos/ThumbnailGrid.js';
 import { SearchBar } from '../components/search/SearchBar.js';
-import { ThemeToggle } from '../components/shared/ThemeToggle.js';
-import { NotificationBell } from '../components/shared/NotificationBell.js';
 import { OnThisDayBanner } from '../components/shared/OnThisDayBanner.js';
 
 interface BrowsePageProps {
@@ -20,27 +13,18 @@ interface BrowsePageProps {
   onNavigate: (path: string) => void;
   onPhotoSelect: (photo: Photo, allPhotos: Photo[]) => void;
   onSearch: (query: string) => void;
-  onShowActivity: () => void;
+  onHome: () => void;
+  onShowActivity?: () => void;
 }
 
-export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, onShowActivity }: BrowsePageProps) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const user = useCurrentUser();
-  const logout = useLogout();
-  const triggerIndex = useTriggerIndex();
-  const { theme, toggleTheme } = useTheme();
+export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, onHome, onShowActivity }: BrowsePageProps) {
   const [sort, setSort] = useState<SortField>('filename');
   const [order, setOrder] = useState<SortOrder>('asc');
 
-  const [indexProgress, setIndexProgress] = useState<{ phase: string; scannedFolders: number; scannedFiles: number; indexedFiles: number; totalFiles: number; previewsTotal: number; previewsDone: number; error?: string } | null>(null);
-  const [indexActionError, setIndexActionError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error, refetch } = useFolderContents(folderPath, sort, order);
   const visibleSubfolders = data?.subfolders.filter((folder) => folder.photoCount > 0) ?? [];
-  const isIndexActionPending = triggerIndex.isPending;
 
   const handlePhotoClick = useCallback((photo: Photo) => {
     if (data?.photos) {
@@ -48,142 +32,32 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
     }
   }, [data?.photos, onPhotoSelect]);
 
-  const startPolling = useCallback(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch('/api/index/progress', { credentials: 'include' });
-        const progress = await res.json();
-        setIndexProgress(progress);
-        if (progress.phase === 'complete' || progress.phase === 'error') {
-          clearInterval(pollRef.current);
-          pollRef.current = undefined;
-          if (progress.phase === 'complete') {
-            refetch();
-            setTimeout(() => setIndexProgress(null), 3000);
-          } else {
-            setIndexActionError(progress.error || 'Indexing failed.');
-          }
-        }
-      } catch {
-        setIndexActionError('Could not check indexing progress.');
-      }
-    }, 500);
-  }, [refetch]);
-
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
-
-  const handleIndex = (includeSubfolders = false) => {
-    setIndexActionError(null);
-    setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
-    triggerIndex.mutate({ folderPath: folderPath || undefined, includeSubfolders }, {
-      onSuccess: () => startPolling(),
-      onError: (error) => {
-        setIndexProgress(null);
-        setIndexActionError(error instanceof Error ? error.message : 'Could not start indexing.');
-      },
-    });
-  };
-
-  const clearAndReindex = useMutation({
-    mutationFn: async () => {
-      await api.clearIndex();
-      return api.triggerIndex({ includeSubfolders: true });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['folder-contents'] });
-      startPolling();
-    },
-    onError: (error) => {
-      setIndexProgress(null);
-      setIndexActionError(error instanceof Error ? error.message : 'Could not clear and re-index.');
-    },
-  });
-
-  const handleClearAndReindex = () => {
-    const confirmed = confirm(
-      'Clear the full photo index and re-index the library folder and all child folders? Original photo files will not be changed.'
-    );
-    if (!confirmed) return;
-
-    setIndexActionError(null);
-    setIndexProgress({ phase: 'scanning', scannedFolders: 0, scannedFiles: 0, indexedFiles: 0, totalFiles: 0, previewsTotal: 0, previewsDone: 0 });
-    clearAndReindex.mutate();
-  };
-
   return (
     <div style={{ height: '100vh', width: '100%', minWidth: 0, overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header style={{
-        padding: '10px 24px',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid var(--glass-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-        position: 'sticky',
-        top: 0,
-        zIndex: 20,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+      <AppChrome
+        homeTitle={folderPath ? 'Go to parent folder' : 'Home'}
+        onHome={onHome}
+        onActivity={onShowActivity}
+        onNavigateToPhoto={async (photoId) => {
+          try {
+            const res = await fetch(`/api/photos/${photoId}`, { credentials: 'include' });
+            if (!res.ok) return;
+            const body = await res.json();
+            if (body?.photo) onPhotoSelect(body.photo, [body.photo]);
+          } catch {}
+        }}
+      />
+
+      <div className="browse-taskbar">
+        <div className="browse-taskbar-breadcrumbs">
           {data?.breadcrumbs && (
             <Breadcrumbs crumbs={data.breadcrumbs} onNavigate={onNavigate} />
           )}
         </div>
-        <h1 style={{
-          fontSize: 17,
-          fontWeight: 700,
-          fontFamily: 'var(--font-display)',
-          letterSpacing: '-0.02em',
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          margin: 0,
-          pointerEvents: 'none',
-        }}>
-          {folderPath ? 'Gallery' : 'Library'}
-        </h1>
-        <div
-          className="browse-header-actions"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 1, minWidth: 0, overflowX: 'hidden' }}
-        >
-          <div style={{ width: 200 }}>
-            <SearchBar onSearch={onSearch} onClear={() => {}} isSearching={false} />
-          </div>
-          <button
-            className="btn btn-ghost"
-            onClick={() => handleIndex(false)}
-            disabled={isIndexActionPending || clearAndReindex.isPending}
-            title={folderPath ? 'Re-index files directly in this folder' : 'Re-index files directly in the library folder'}
-            style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
-          >
-            <RefreshCw size={14} className={isIndexActionPending ? 'spinning' : ''} /> Index Folder
-          </button>
-          <button
-            className="btn btn-ghost"
-            onClick={() => handleIndex(true)}
-            disabled={isIndexActionPending || clearAndReindex.isPending}
-            title={folderPath ? 'Re-index this folder and all subfolders' : 'Re-index the library folder and all child folders'}
-            style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
-          >
-            <RefreshCw size={14} className={isIndexActionPending ? 'spinning' : ''} /> Folder + Subfolders
-          </button>
-          {!folderPath && user.data?.role === 'admin' && (
-            <button
-              className="btn btn-danger"
-              onClick={handleClearAndReindex}
-              disabled={isIndexActionPending || clearAndReindex.isPending}
-              title="Clear the index, then re-index the library folder and all child folders"
-              style={{ padding: '4px 8px', fontSize: 13, whiteSpace: 'nowrap' }}
-            >
-              <AlertTriangle size={14} /> Clear + Re-index
-            </button>
-          )}
+        <div className="browse-taskbar-search">
+          <SearchBar onSearch={onSearch} onClear={() => {}} isSearching={false} />
+        </div>
+        <div className="browse-taskbar-actions">
           <select
             className="input"
             style={{ width: 'auto', padding: '4px 8px', fontSize: 13 }}
@@ -201,105 +75,8 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             <option value="timeline-asc">Timeline</option>
             <option value="annotation-asc">Needs annotation</option>
           </select>
-          <NotificationBell
-            onNavigateToPhoto={async (photoId) => {
-              try {
-                const res = await fetch(`/api/photos/${photoId}`, { credentials: 'include' });
-                if (!res.ok) return;
-                const body = await res.json();
-                if (body?.photo) onPhotoSelect(body.photo, [body.photo]);
-              } catch {}
-            }}
-          />
-          <button className="btn btn-ghost" onClick={onShowActivity} style={{ padding: '4px 8px' }} title="Activity">
-            <Activity size={14} />
-          </button>
-          <button className="btn btn-ghost" onClick={() => navigate('/albums')} style={{ padding: '4px 8px', fontSize: 13 }}>
-            <Images size={14} /> Albums
-          </button>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          {user.data?.role === 'admin' && (
-            <button className="btn btn-ghost" onClick={() => navigate('/admin')} style={{ padding: '4px 8px' }}>
-              <Settings size={14} />
-            </button>
-          )}
-          <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <BookOpen size={14} /> Read Me
-          </button>
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{user.data?.displayName}</span>
-          <button className="btn btn-ghost" onClick={() => logout.mutate()} style={{ padding: '4px 8px', fontSize: 13 }}>
-            Logout
-          </button>
         </div>
-      </header>
-
-      {/* Index Progress */}
-      {indexProgress && (
-        <div style={{
-          padding: '8px 20px',
-          borderBottom: '1px solid var(--border-color)',
-          background: 'var(--bg-secondary)',
-          fontSize: 13,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ color: 'var(--text-secondary)' }}>
-              {indexProgress.phase === 'scanning' && `Scanning folders... ${indexProgress.scannedFolders} folders, ${indexProgress.scannedFiles} files found`}
-              {indexProgress.phase === 'indexing' && `Indexing... ${indexProgress.indexedFiles} of ${indexProgress.totalFiles} files`}
-              {indexProgress.phase === 'previews' && `Generating previews... ${indexProgress.previewsDone} of ${indexProgress.previewsTotal}`}
-              {indexProgress.phase === 'complete' && `Indexing complete — ${indexProgress.totalFiles} files processed`}
-              {indexProgress.phase === 'error' && (indexProgress.error || 'Indexing failed.')}
-            </span>
-            {indexProgress.phase === 'complete' && (
-              <span style={{ color: 'var(--success)', fontWeight: 500 }}>Done</span>
-            )}
-            {indexProgress.phase === 'error' && (
-              <span style={{ color: 'var(--danger)', fontWeight: 500 }}>Failed</span>
-            )}
-          </div>
-          {indexProgress.phase === 'previews' && indexProgress.previewsTotal > 0 && (
-            <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                borderRadius: 2,
-                background: 'var(--accent)',
-                width: `${(indexProgress.previewsDone / indexProgress.previewsTotal) * 100}%`,
-                transition: 'width 0.3s ease',
-              }} />
-            </div>
-          )}
-          {indexProgress.phase === 'indexing' && indexProgress.totalFiles > 0 && (
-            <div style={{
-              height: 4,
-              borderRadius: 2,
-              background: 'var(--bg-tertiary)',
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${Math.round((indexProgress.indexedFiles / indexProgress.totalFiles) * 100)}%`,
-                background: 'var(--accent)',
-                borderRadius: 2,
-                transition: 'width 0.3s ease',
-              }} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {indexActionError && (
-        <div
-          role="alert"
-          style={{
-            padding: '8px 20px',
-            borderBottom: '1px solid var(--border-color)',
-            background: 'rgba(239, 68, 68, 0.12)',
-            color: 'var(--danger)',
-            fontSize: 13,
-          }}
-        >
-          {indexActionError}
-        </div>
-      )}
+      </div>
 
       {/* Content */}
       <div ref={scrollContainerRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', padding: 24 }}>
@@ -364,22 +141,6 @@ export function BrowsePage({ folderPath, onNavigate, onPhotoSelect, onSearch, on
             {visibleSubfolders.length === 0 && data.photos.length === 0 && (
               <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
                 <p style={{ marginBottom: 12 }}>This folder is empty.</p>
-                <button className="btn btn-primary" onClick={() => handleIndex(false)}>
-                  <RefreshCw size={14} /> Run Indexer
-                </button>
-                <button className="btn btn-ghost" onClick={() => handleIndex(true)} style={{ marginLeft: 8 }}>
-                  <RefreshCw size={14} /> Include Subfolders
-                </button>
-                {!folderPath && user.data?.role === 'admin' && (
-                  <button
-                    className="btn btn-danger"
-                    onClick={handleClearAndReindex}
-                    disabled={clearAndReindex.isPending}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <AlertTriangle size={14} /> Clear + Re-index
-                  </button>
-                )}
               </div>
             )}
           </>

@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, BookOpen } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import type { ActivityEntry, AnnotationProgress } from '@photo-viewer/shared';
+import { AppChrome } from '../components/layout/AppChrome.js';
 import { ProgressBar } from '../components/shared/ProgressBar.js';
-import { ThemeToggle } from '../components/shared/ThemeToggle.js';
-import { useTheme } from '../hooks/useTheme.js';
 
 interface ActivityPageProps {
   onBack: () => void;
+  onHome: () => void;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -31,9 +30,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
-export function ActivityPage({ onBack }: ActivityPageProps) {
-  const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
+export function ActivityPage({ onBack, onHome }: ActivityPageProps) {
   const activityQuery = useQuery<{ entries: ActivityEntry[]; total: number }>({
     queryKey: ['activity'],
     queryFn: async () => {
@@ -54,26 +51,14 @@ export function ActivityPage({ onBack }: ActivityPageProps) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        padding: '10px 24px',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid var(--glass-border)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        flexShrink: 0,
-      }}>
+      <AppChrome onHome={onHome} />
+
+      <div className="screen-taskbar">
         <button className="btn btn-ghost" onClick={onBack} style={{ padding: '4px 8px' }}>
           <ArrowLeft size={16} /> Back
         </button>
-        <h1 style={{ fontSize: 16, fontWeight: 600, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Activity</h1>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <BookOpen size={14} /> Read Me
-        </button>
-      </header>
+        <h1 className="screen-taskbar-title">Activity</h1>
+      </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: 24, maxWidth: 700, margin: '0 auto', width: '100%' }}>
         {/* Progress stats */}

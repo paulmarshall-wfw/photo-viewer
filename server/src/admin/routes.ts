@@ -6,7 +6,8 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_DAYS } from '@photo-viewer/shared'
 import { config } from '../config.js';
 import { createAdminUser, createInvite, regenerateInvite, revokeUser, getAllUsers } from '../auth/service.js';
 import { isSetupComplete, setConfig, getPhotosPath, setPhotosPath, clearLibraryDerivedState } from './service.js';
-import { isIndexing } from '../photos/indexer.js';
+import { getIndexProgress, isIndexing, runIndex, validateIndexTarget } from '../photos/indexer.js';
+import { snapshotAlbumMembershipByPath } from '../albums/membership-snapshot.js';
 
 const COOKIE_MAX_AGE = SESSION_MAX_AGE_DAYS * 24 * 60 * 60;
 
@@ -249,5 +250,33 @@ export async function adminRoutes(app: FastifyInstance) {
 
     clearLibraryDerivedState();
     return { success: true };
+  });
+
+  // Admin: clear indexed library state, re-index the full library, and restore
+  // album memberships whose source files/folders still exist after indexing.
+  app.post('/api/admin/index/clear-and-reindex', async (request, reply) => {
+    if (request.user?.role !== 'admin') {
+      return reply.code(403).send({ error: 'Admin access required' });
+    }
+
+    if (isIndexing()) {
+      return reply.code(409).send({ error: 'Indexing is currently running' });
+    }
+
+    try {
+      validateIndexTarget();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Invalid index target';
+      return reply.code(400).send({ error: message });
+    }
+
+    const albumSnapshot = snapshotAlbumMembershipByPath();
+    clearLibraryDerivedState();
+
+    runIndex(undefined, { includeSubfolders: true, restoreAlbumMembershipSnapshot: albumSnapshot }).catch(err => {
+      request.log.error(err, 'Clear and re-index failed');
+    });
+
+    return { status: 'started', progress: getIndexProgress() };
   });
 }

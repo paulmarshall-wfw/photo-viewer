@@ -9,6 +9,7 @@ import { folders, photos } from '../db/schema.js';
 import { readBasicExif } from '../metadata/exif-reader.js';
 import { readXmp } from '../metadata/xmp.js';
 import { getPhotosPath } from '../admin/service.js';
+import { restoreAlbumMembershipByPath, type AlbumMembershipSnapshot } from '../albums/membership-snapshot.js';
 import { generateThumbnailFromPsd, generatePreviewFromPsd } from '../images/preview-generator.js';
 import { hasCachedThumbnail, hasCachedPreview, getThumbnailPath, getPreviewPath } from '../images/cache.js';
 
@@ -25,6 +26,7 @@ export interface IndexProgress {
 
 export interface RunIndexOptions {
   includeSubfolders?: boolean;
+  restoreAlbumMembershipSnapshot?: AlbumMembershipSnapshot;
 }
 
 let indexing = false;
@@ -198,6 +200,10 @@ export async function runIndex(folderRelativePath?: string, options: RunIndexOpt
     } else {
       // For single-folder index, only clean up files in that folder
       cleanupDeletedInFolder(normalizedFolderRelativePath ?? '', entries.files.map(f => f.relativePath));
+    }
+
+    if (options.restoreAlbumMembershipSnapshot) {
+      restoreAlbumMembershipByPath(options.restoreAlbumMembershipSnapshot);
     }
 
     // Update derived data after cleanup so counts and search do not keep deleted rows.

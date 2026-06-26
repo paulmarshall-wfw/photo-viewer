@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpen, Home, Images, Plus, RefreshCw, Save, Settings, Trash2 } from 'lucide-react';
+import { Images, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
 import type { AlbumSummary, AlbumVisibility, Photo } from '@photo-viewer/shared';
 import { useAlbum, useAlbums, useCreateAlbum, useDeleteAlbum, useRemoveAlbumPhoto, useUpdateAlbum } from '../hooks/useAlbums.js';
-import { useCurrentUser, useLogout } from '../hooks/useAuth.js';
+import { useCurrentUser } from '../hooks/useAuth.js';
 import { useTheme } from '../hooks/useTheme.js';
-import { ThemeToggle } from '../components/shared/ThemeToggle.js';
+import { AppChrome } from '../components/layout/AppChrome.js';
 import { AlbumPickerButton } from '../components/albums/AlbumPickerButton.js';
 import { OrientedThumbnailImage } from '../components/photos/OrientedThumbnailImage.js';
 import { ViewerPage } from './ViewerPage.js';
-import clientPackage from '../../package.json';
-
-const APP_VERSION = clientPackage.version;
 
 function VisibilityBadge({ visibility }: { visibility: AlbumVisibility }) {
   return (
@@ -181,8 +178,7 @@ export function AlbumsPage() {
   const navigate = useNavigate();
   const { albumId } = useParams();
   const user = useCurrentUser();
-  const logout = useLogout();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const albums = useAlbums();
   const album = useAlbum(albumId);
   const createAlbum = useCreateAlbum();
@@ -280,66 +276,16 @@ export function AlbumsPage() {
         onPhotoUpdate={handleViewerPhotoUpdate}
         onToggleInfo={() => setShowInfo((visible) => !visible)}
         showInfo={showInfo}
+        onHome={() => navigate('/albums')}
       />
     );
   }
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{
-        padding: '10px 24px',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid var(--glass-border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-        position: 'sticky',
-        top: 0,
-        zIndex: 20,
-      }}>
-        <div className="app-identity" style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--font-display)', whiteSpace: 'nowrap' }}>
-            Photo Viewer
-          </span>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-            v{APP_VERSION}
-          </span>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </div>
-        <h1 style={{
-          fontSize: 17,
-          fontWeight: 700,
-          fontFamily: 'var(--font-display)',
-          letterSpacing: '-0.02em',
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          margin: 0,
-          pointerEvents: 'none',
-        }}>
-          Albums
-        </h1>
-        <div className="browse-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ padding: '4px 8px', fontSize: 13 }}>
-            <Home size={14} /> Library
-          </button>
-          {user.data?.role === 'admin' && (
-            <button className="btn btn-ghost" onClick={() => navigate('/admin')} style={{ padding: '4px 8px' }} title="Admin">
-              <Settings size={14} />
-            </button>
-          )}
-          <button className="btn btn-ghost" onClick={() => navigate('/readme')} style={{ padding: '4px 8px', fontSize: 13 }}>
-            <BookOpen size={14} /> Read Me
-          </button>
-          <span className="username-label" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{user.data?.displayName}</span>
-          <button className="btn btn-ghost" onClick={() => logout.mutate()} style={{ padding: '4px 8px', fontSize: 13 }}>
-            Logout
-          </button>
-        </div>
-      </header>
+      <AppChrome
+        onHome={() => navigate('/')}
+      />
 
       <main className="albums-workspace">
         <aside className="albums-sidebar" aria-label="Albums">

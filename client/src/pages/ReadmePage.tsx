@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, FolderOpen, Image, Search, Activity, Settings, Keyboard, Star, FileImage, Heart, Bell, Calendar, Users } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme.js';
-import { ThemeToggle } from '../components/shared/ThemeToggle.js';
+import { AppChrome } from '../components/layout/AppChrome.js';
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
@@ -62,13 +61,15 @@ function FormatRow({ ext, support, note }: { ext: string; support: string; note:
 export function ReadmePage() {
   const navigate = useNavigate();
   const goBack = () => navigate(-1 as any);
-  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 80px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <AppChrome onHome={() => navigate('/')} />
+      <main style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 80px' }}>
       {/* Header */}
       <div style={{ marginBottom: 40 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', marginBottom: 16 }}>
           <button
             className="btn btn-primary"
             onClick={goBack}
@@ -76,7 +77,6 @@ export function ReadmePage() {
           >
             <ArrowLeft size={16} /> Back
           </button>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
           <BookOpen size={28} style={{ color: 'var(--accent)' }} />
@@ -218,9 +218,9 @@ export function ReadmePage() {
       </Section>
 
       {/* Settings */}
-      <Section icon={<Settings size={20} />} title="Settings (Admin only)">
+      <Section icon={<Settings size={20} />} title="Settings">
         <p style={{ marginBottom: 8 }}>
-          Accessible via the gear icon in the top nav. Only admin users can see this page.
+          Accessible via the gear icon in the top nav. Read Me and Logout live here for every user; admin users also see library and user management tools.
         </p>
         <ul style={{ marginLeft: 16 }}>
           <li style={{ marginBottom: 4 }}>
@@ -230,7 +230,7 @@ export function ReadmePage() {
             <strong style={{ color: 'var(--text-primary)' }}>Users</strong> — View all accounts. Revoke access to remove a user. Regenerate an invite link if needed.
           </li>
           <li>
-            <strong style={{ color: 'var(--text-primary)' }}>Storage Location</strong> — The path to your photos directory. Use Browse to navigate the filesystem, then click Update. Re-index after changing the path.
+            <strong style={{ color: 'var(--text-primary)' }}>Indexing</strong> — Scan the library for new or changed photos, include subfolders, or rebuild the index when the library needs a clean refresh.
           </li>
         </ul>
       </Section>
@@ -265,6 +265,8 @@ export function ReadmePage() {
           PSB previews are generated during indexing and may take a moment for large files. All other formats generate thumbnails and previews on first view and are cached for instant loading thereafter.
         </p>
       </Section>
+        </div>
+      </main>
     </div>
   );
 }
